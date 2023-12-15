@@ -16,3 +16,13 @@ field(field(Class, FieldName, Value, Type)) :-
 
 method(method(Class, MethodName, ArgList, Form)) :-
     assert(method(Class, MethodName, ArgList, Form)).
+
+create_instance(Class, Instance) :-
+    assert(instance(Instance, Class)).
+
+call_method(Instance, MethodName, Args) :-
+    instance(Instance, Class),
+    method(Class, MethodName, ArgList, Form),
+    append(ArgList, [this=Instance], FullArgList),
+    call(Form).
+
