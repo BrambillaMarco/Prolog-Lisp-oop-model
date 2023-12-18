@@ -1,9 +1,11 @@
 :- dynamic class/2, field/2, field/3, method/3.
 
 def_class(ClassName, Parents):-
+    not(class(ClassName, _)),
     assert(class(ClassName, Parents)).
 
 def_class(ClassName, Parents, Parts):-
+    not(class(ClassName, _)),
     assert(class(ClassName, Parents)),
     parts_assertion(ClassName, Parts).
 
