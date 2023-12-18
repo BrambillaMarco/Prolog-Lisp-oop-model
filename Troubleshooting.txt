@@ -1,6 +1,7 @@
 def-class
 
-1) "collegare" fields e methods ad una classe specifica. - FATTO IN PARTE
-2) controllare che quando passo una superclasse questa esista.
-2) risolvere il fatto che si possano creare fields identici
-3) idem con method
+1) risolvere il fatto che si possano creare fields e methods identici
+
+make
+
+1) l'input utente della traccia per quanto riguarda i campi di un istanza è problematico
