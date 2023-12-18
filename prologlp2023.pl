@@ -27,3 +27,5 @@ field(FieldName, Value, Type):-
 method(MethodName, ArgList, Form):-
     assert(method(MethodName, ArgList, Form)).
 
+
+
