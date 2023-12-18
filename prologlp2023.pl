@@ -1,10 +1,10 @@
-:- dynamic class/2, field/3, method/3.
+:- dynamic class/2, field/2, field/3, method/3.
 
-def_class(ClassName, [Parents]):-
-    assert(ClassName, Parents).
+def_class(ClassName, Parents):-
+    assert(class(ClassName, Parents)).
 
-def_class(ClassName, [Parents], Parts):-
-    assert(ClassName, Parents),
+def_class(ClassName, Parents, Parts):-
+    assert(class(ClassName, Parents)),
     parts_assertion(ClassName, Parts).
 
 
