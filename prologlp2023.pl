@@ -1,66 +1,47 @@
-:- dynamic class/2,
+:- dynamic class/3,
            field/2,
            field/3,
            method/3,
-           instance/3,
-           cf/2,
-           cm/2.
-
+           instance/3.
 
 def_class(ClassName, Parents):-
-    not(class(ClassName, _)),
+    not(class(ClassName, _, _)),
+    is_list(Parents),
     check_parents(Parents),
-    assert(class(ClassName, Parents)).
+    assert(class(ClassName, Parents, [])).
 
 def_class(ClassName, Parents, Parts):-
-    not(class(ClassName, _)),
+    not(class(ClassName, _, _)),
+    is_list(Parents),
     check_parents(Parents),
-    assert(class(ClassName, Parents)),
-    parts_assertion(ClassName, Parts).
-
+    check_parts(Parts),
+    assert(class(ClassName, Parents, Parts)).
 
 check_parents([]).
 
 check_parents([Parent|Parents]):-
-    class(Parent, _),
+    class(Parent, _, _),
     check_parents(Parents).
 
 
-parts_assertion(_, []).
+check_parts([]).
 
-parts_assertion(ClassName, [Part|Rest]):-
+check_parts([Part|Rest]):-
     Part=field(_,_),
-    assert(Part),
-    assert(cf(ClassName, Part)),
-    parts_assertion(ClassName, Rest).
+    check_parts(Rest).
 
-parts_assertion(ClassName, [Part|Rest]):-
+check_parts([Part|Rest]):-
     Part=field(_,_,_),
-    assert(Part),
-    assert(cf(ClassName, Part)),
-    parts_assertion(ClassName, Rest).
+    check_parts(Rest).
 
-parts_assertion(ClassName, [Part|Rest]):-
+check_parts([Part|Rest]):-
     Part=method(_,_,_),
-    assert(Part),
-    assert(cm(ClassName, Part)),
-    parts_assertion(ClassName, Rest).
-
-
-field(FieldName, Value):-
-    assert(field(FieldName, Value)).
-
-field(FieldName, Value, Type):-
-    assert(field(FieldName, Value, Type)).
-
-
-method(MethodName, ArgList, Form):-
-    assert(method(MethodName, ArgList, Form)).
+    check_parts(Rest).
 
 
 make(InstanceName, ClassName):-
     not(instance(InstanceName, ClassName, _)),
-    class(ClassName, _),
+    class(ClassName, _, _),
     assert(instance(InstanceName, ClassName, [])),
     concat_atom(["Hai creato l'istanza ",
                  InstanceName,

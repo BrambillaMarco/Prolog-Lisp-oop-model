@@ -1,6 +1,7 @@
 def-class
 
 1) risolvere il fatto che si possano creare fields e methods identici
+2) usare retract in caso sia stato fatto un assert di una classe che per qualche motivo doveva fallire
 
 make
 
