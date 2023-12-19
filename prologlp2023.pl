@@ -8,7 +8,8 @@ def_class(ClassName, Parents):-
     not(class(ClassName, _, _)),
     is_list(Parents),
     check_parents(Parents),
-    assert(class(ClassName, Parents, [])).
+    assert(class(ClassName, Parents, [])),
+    legacy(ClassName, Parents, [], []).
 
 def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
@@ -17,11 +18,25 @@ def_class(ClassName, Parents, Parts):-
     check_parts(Parts),
     assert(class(ClassName, Parents, Parts)).
 
+
 check_parents([]).
 
 check_parents([Parent|Parents]):-
     class(Parent, _, _),
     check_parents(Parents).
+
+
+legacy(_, [], [], []).
+
+legacy(ClassName, [], PastParents, In):-
+    retract(class(ClassName, _, _)),
+    assert(class(ClassName, PastParents, In)).
+
+legacy(ClassName, [Parent|Parents], PastParents, In):-
+    findall(Parts, class(Parent, _, Parts), FA),
+    append(In, FA, Out),
+    append([Parent], PastParents, PP),
+    legacy(ClassName, Parents, PP, Out).
 
 
 check_parts([]).
