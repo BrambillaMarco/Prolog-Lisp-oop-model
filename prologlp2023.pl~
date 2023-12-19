@@ -8,19 +8,19 @@ def_class(ClassName, Parents):-
     not(class(ClassName, _, _)),
     is_list(Parents),
     check_parents(Parents),
-    assert(class(ClassName, Parents, [])).
+    assert(class(ClassName, Parents, Out)).
 
 def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
     is_list(Parents),
     check_parents(Parents),
     check_parts(Parts),
-    assert(class(ClassName, Parents, Parts)).
+    assert(class(ClassName, Parents, X)).
 
 check_parents([]).
 
 check_parents([Parent|Parents]):-
-    class(Parent, _),
+    class(Parent, _, _),
     check_parents(Parents).
 
 
