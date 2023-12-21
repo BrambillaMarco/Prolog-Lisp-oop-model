@@ -73,25 +73,29 @@ is_class(ClassName) :-
 
 % is_instance/1
 % verifica se esiste un'istanza generica
-is_instance(InstanceName) :-
-    instance(InstanceName, _, _).
+is_instance(Value) :-
+    instance(Value, _, _).
 
 % is_instance/2
 % verifica se esiste un'istanza con una determinata
 % superclasse
-is_instance(InstanceName, SuperClass) :-
-    check_superclass(SuperClass, Class),
-    instance(InstanceName, Class, _).
+is_instance(Value, ClassName) :-
+    check_superclass(ClassName, Class),
+    instance(Value, Class, _).
 
 
 % check_superclass/2
 % verifica se una classe è figlia di un'altra classe
+check_superclass([], _).
 check_superclass(SuperClass, Class) :-
     class(Class, [SuperClass | OtherSuperClass], _),
     check_superclass(OtherSuperClass, Class).
 
-
-
+% inst/2
+% recupera il nome con cui è stata creata una
+% istanza
+inst(InstanceName, Instance) :-
+    instance(InstanceName, _, _).
 
 
 
