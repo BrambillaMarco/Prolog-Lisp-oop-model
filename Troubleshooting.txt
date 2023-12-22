@@ -1,7 +1,12 @@
-def-class
+is_instance
 
-1) risolvere ereditarietà
+1) class(sole, [galassia], []).
+   make(s1, sole).
+   is_instance(s1, galassia).
+   true.
+   is_instance(s1, sole).
+   true o false???
 
-make
+inst
 
-1) l'input utente della traccia per quanto riguarda i campi di un istanza è problematico
+1) verificare se è possibile rimuovere warning singleton

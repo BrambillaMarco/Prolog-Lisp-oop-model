@@ -66,6 +66,9 @@ make(InstanceName, ClassName):-
     class(ClassName, _, _),
     assert(instance(InstanceName, ClassName, [])).
 
+make(InstanceName, ClassName):-
+    InstanceName=instance(InstanceName, ClassName, []).
+
 % is_class/1
 % verifica se esiste la classe
 is_class(ClassName) :-
@@ -73,15 +76,15 @@ is_class(ClassName) :-
 
 % is_instance/1
 % verifica se esiste un'istanza generica
-is_instance(InstanceName) :-
-    instance(InstanceName, _, _).
+is_instance(Value) :-
+    instance(Value, _, _).
 
 % is_instance/2
 % verifica se esiste un'istanza con una determinata
 % superclasse
-is_instance(InstanceName, SuperClass) :-
-    check_superclass(SuperClass, Class),
-    instance(InstanceName, Class, _).
+is_instance(Value, ClassName) :-
+    check_superclass(ClassName, Class),
+    instance(Value, Class, _).
 
 
 % check_superclass/2
@@ -91,8 +94,11 @@ check_superclass(SuperClass, Class) :-
     class(Class, [SuperClass | OtherSuperClass], _),
     check_superclass(OtherSuperClass, Class).
 
-
-
+% inst/2
+% recupera il nome con cui è stata creata una
+% istanza
+inst(InstanceName, Instance) :-
+    instance(InstanceName, _, _).
 
 
 

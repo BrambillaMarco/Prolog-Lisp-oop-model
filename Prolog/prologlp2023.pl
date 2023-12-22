@@ -66,6 +66,10 @@ make(InstanceName, ClassName):-
     class(ClassName, _, _),
     assert(instance(InstanceName, ClassName, [])).
 
+make(InstanceName, ClassName):-
+    var(InstanceName),
+    InstanceName=instance(InstanceName, ClassName, []).
+
 % is_class/1
 % verifica se esiste la classe
 is_class(ClassName) :-
