@@ -1,12 +1,3 @@
-is_instance
-
-1) class(sole, [galassia], []).
-   make(s1, sole).
-   is_instance(s1, galassia).
-   true.
-   is_instance(s1, sole).
-   true o false???
-
 inst
 
-1) verificare se è possibile rimuovere warning singleton
+1) Funzionante, da capire se è giusta concettualmente.

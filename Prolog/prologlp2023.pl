@@ -13,7 +13,7 @@ def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
     is_list(Parents),
     check_parents(Parents),
-    check_parts(Parts),
+    process_parts(Parts),
     check_legacy(Parents, InheritedParts),
     append(InheritedParts, Parts, AllParts),
     assert(class(ClassName, Parents, AllParts)).
@@ -29,16 +29,24 @@ check_parents([Parent | Parents]):-
 
 % check_parts/1
 % verifica se campi e/o metodi sono scritti correttamente
-check_parts([]).
-check_parts([Part | Rest]):-
+process_parts([]).
+process_parts([Part | Rest]):-
     Part=field(_, _),
-    check_parts(Rest).
-check_parts([Part | Rest]):-
+    process_parts(Rest).
+process_parts([Part | Rest]):-
     Part=field(_, _, _),
-    check_parts(Rest).
-check_parts([Part|Rest]):-
-    Part=method(_, _, _),
-    check_parts(Rest).
+    process_parts(Rest).
+process_parts([Part|Rest]):-
+    Part=method(MethodName, MethodAttributes, MethodBody),
+    MethodAttributes=[],
+    assert(MethodName :- MethodBody),
+    process_parts(Rest).
+process_parts([Part|Rest]):-
+    Part=method(MethodName, MethodAttributes, MethodBody),
+    not(MethodAttributes=[]),
+    assert(MethodName:MethodAttributes :- MethodBody),
+    process_parts(Rest).
+
 
 
 % check_legacy/2
@@ -59,6 +67,7 @@ make(InstanceName, ClassName):-
 
 make(InstanceName, ClassName):-
     var(InstanceName),
+    class(ClassName, _, _),
     InstanceName=instance(InstanceName, ClassName, []).
 
 
@@ -84,11 +93,7 @@ is_instance(Value, SuperClass) :-
 
 
 % inst/2
-% recupera il nome con cui è stata creata una
-% istanza
+% recupera un istanza dato il suo nome
 inst(InstanceName, Instance) :-
     instance(InstanceName, ClassName, Fields),
-    append([Instance,
-           "e': ",
-           instance(InstanceName, ClassName, Fields)], WO),
-    write(WO).
+    Instance=instance(InstanceName, ClassName, Fields).
