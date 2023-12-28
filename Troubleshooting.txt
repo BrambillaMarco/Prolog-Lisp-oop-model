@@ -1,3 +1,7 @@
+GENERALE
+
+1) capire dove inserire dei cut e dove no. (nei casi base)
+
 inst
 
 1) Funzionante, da capire se è giusta concettualmente.

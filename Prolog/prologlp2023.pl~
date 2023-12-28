@@ -13,7 +13,7 @@ def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
     is_list(Parents),
     check_parents(Parents),
-    process_parts(Parts),
+    check_parts(ClassName, Parts),
     check_legacy(Parents, InheritedParts),
     append(InheritedParts, Parts, AllParts),
     assert(class(ClassName, Parents, AllParts)).
@@ -27,26 +27,21 @@ check_parents([Parent | Parents]):-
     check_parents(Parents).
 
 
-% check_parts/1
-% verifica se campi e/o metodi sono scritti correttamente
-process_parts([]).
-process_parts([Part | Rest]):-
-    Part=field(_, _),
-    process_parts(Rest).
-process_parts([Part | Rest]):-
-    Part=field(_, _, _),
-    process_parts(Rest).
-process_parts([Part|Rest]):-
-    Part=method(MethodName, MethodAttributes, MethodBody),
-    MethodAttributes=[],
-    assert(MethodName :- call(MethodBody)),
-    process_parts(Rest).
-process_parts([Part|Rest]):-
-    Part=method(MethodName, MethodAttributes, MethodBody),
-    not(MethodAttributes=[]),
-    assert(MethodName:MethodAttributes :- call(MethodBody)),
-    process_parts(Rest).
+% check_parts/2
+% insieme a check_part/2 controlla che la sintassi delle Parts
+% sia corretta
+check_parts(_, []).
+check_parts(ClassName, [Part | Rest]):-
+    check_part(ClassName, Part),
+    check_parts(ClassName, Rest).
 
+% check_part/2
+% verifica se una parte è un field o un method, e in quest'ultimo
+% caso, crea il metodo stesso
+check_part(_, field(_, _)).
+check_part(_, field(_, _, _)).
+check_part(ClassName, method(MethodName, MethodAttributes, MethodBody)):-
+    create_method(ClassName, MethodName, MethodAttributes, MethodBody).
 
 
 % check_legacy/2
@@ -69,6 +64,20 @@ make(InstanceName, ClassName):-
     var(InstanceName),
     class(ClassName, _, _),
     InstanceName=instance(InstanceName, ClassName, []).
+
+% create_method/4
+% crea dinamicamente le regole per i metodi
+% specifici dell'istanza
+create_method(ClassName, MethodName, MethodAttributes, MethodBody):-
+    assert((MethodName :- call_method(ClassName,
+                                      MethodAttributes,
+                                      MethodBody))).
+
+call_method(_, _, []).
+call_method(InstanceName, MethodAttributes, [Rule|Rest]):-
+    instance(InstanceName, _, _),
+    call(Rule, InstanceName, MethodAttributes),
+    call_method(InstanceName, MethodAttributes, Rest).
 
 
 % is_class/1
