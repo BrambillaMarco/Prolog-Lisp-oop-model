@@ -1,6 +1,7 @@
-:- dynamic class/3,
-           instance/3,
-           method/3.
+:- dynamic
+    class/3,
+    instance/3,
+    method/3.
 
 % def_class/2
 % definisce una classe con nome e genitori
@@ -13,61 +14,88 @@ def_class(ClassName, Parents):-
 def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
     is_list(Parents),
-    check_parents(Parents),
+    exist_parents(Parents),
     check_parts(ClassName, Parts),
-    check_legacy(Parents, InheritedParts),
+    legacy(Parents, InheritedParts),
     append(InheritedParts, Parts, AllParts),
     assert(class(ClassName, Parents, AllParts)).
 
 
-% check_parents/1
+% exist_parents/1
 % verifica se esistono le classi genitori
-check_parents([]).
-check_parents([Parent | Parents]):-
+exist_parents([]).
+exist_parents([Parent | Parents]):-
     class(Parent, _, _),
-    check_parents(Parents).
+    exist_parents(Parents).
 
 
 % check_parts/2
-% insieme a check_part/2 controlla che la sintassi delle Parts
+% insieme a check_part/2 controlla che la sintassi delle parti
 % sia corretta
 check_parts(_, []).
 check_parts(ClassName, [Part | Rest]):-
     check_part(ClassName, Part),
     check_parts(ClassName, Rest).
 
+
 % check_part/2
-% verifica se una parte è un field o un method, e in quest'ultimo
-% caso, crea il metodo stesso
+% verifica se una parte ï¿½ un campo o un metodo
 check_part(_, field(_, _)).
 check_part(_, field(_, _, _)).
 check_part(_, method(_, _, _)).
 
 
-% check_legacy/2
+% legacy/2
 % eredita i campi e/o i metodi delle classi genitore
-check_legacy([], []).
-check_legacy([Parent|Parents], Out) :-
+legacy([], []).
+legacy([Parent|Parents], Out) :-
     class(Parent, _, ParentParts),
-    check_legacy(Parents, Rest),
+    legacy(Parents, Rest),
     append(ParentParts, Rest, Out).
+
 
 % make/2
 % crea l'istanza di una classe attribuendo valori
 % ai campi
 make(InstanceName, ClassName):-
+    make(InstanceName, ClassName, []).
+
+
+% make/3
+% crea l'istanza di una classe attribuendo valori
+% ai campi
+make(InstanceName, ClassName, Fields) :-
     not(instance(InstanceName, ClassName, _)),
-    class(ClassName, _, Parts),
-    examination(InstanceName, Parts),
-    assert(instance(InstanceName, ClassName, [])).
+    class(ClassName, _, ClassParts),
+    is_list(Fields),
+    validate_fields(Fields, ClassParts),
+    transform_fields(Fields, Out),
+    examination(InstanceName, ClassParts),
+    assert(instance(InstanceName, ClassName, Out)).
 
-make(InstanceName, ClassName):-
-    var(InstanceName),
-    class(ClassName, _, _),
-    InstanceName=instance(InstanceName, ClassName, []).
 
+% validate_fields/2
+% verifica se i campi dell'istanza esistono
+% nella classe
+validate_fields([], _).
+validate_fields([FieldName = _| Rest], ClassFields) :-
+    (
+        member(field(FieldName, _), ClassFields);
+        member(field(FieldName, _, _), ClassFields)
+    ),
+    validate_fields(Rest, ClassFields).
+
+% transform_fields/2
+% trasfroma i campi da lista a funtore
+transform_fields([], []).
+transform_fields([FieldName = Value | Rest],
+                 [Field | TransformedRest]) :-
+    Field =.. [field, FieldName, Value],
+    transform_fields(Rest, TransformedRest).
+
+% examination/2
+% esamina se le parti di una classe sono dei campi o dei metodi
 examination(_, []).
-
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
     create_method(InstanceName,
@@ -75,24 +103,13 @@ examination(InstanceName, [Part|Parts]):-
                   MethodAttributes,
                   MethodBody),
     examination(InstanceName, Parts).
-
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
     examination(InstanceName, Parts).
-
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_,_),
     examination(InstanceName, Parts).
 
-
-
-%create_methods(InstanceName, [Method|Rest]):-
-    %Method=method(MethodName, MethodAttributes, MethodBody),
-    %create_method(InstanceName,
-                  %MethodName,
-                  %MethodAttributes,
-                  %MethodBody),
-    %create_methods(InstanceName, Rest).
 
 % create_method/4
 % crea dinamicamente le regole per i metodi
@@ -102,16 +119,13 @@ create_method(InstanceName, MethodName, [], MethodBodyList):-
     list_to_sequence(MethodBodyList, MethodBody),
     assert(Term :- MethodBody).
 
+
+% list_to_sequence/2
+% trasforma una lista in una sequenza
 list_to_sequence([], true).
 list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
-
-%call_method(_, _, []).
-%call_method(InstanceName, MethodAttributes, [Rule|Rest]):-
-    %instance(InstanceName, _, _),
-    %call(Rule, InstanceName, MethodAttributes),
-    %call_method(InstanceName, MethodAttributes, Rest).
 
 
 % is_class/1
@@ -140,3 +154,14 @@ is_instance(Value, SuperClass) :-
 inst(InstanceName, Instance) :-
     instance(InstanceName, ClassName, Fields),
     Instance=instance(InstanceName, ClassName, Fields).
+
+
+% field/3
+% estrae il valore di un campo da una classe
+field(InstanceName, FieldName, Result) :-
+    instance(InstanceName, _, Fields),
+    Result = member(instance(InstanceName, _, FieldName),
+                    Fields).
+
+% fieldx/3
+% estrae
