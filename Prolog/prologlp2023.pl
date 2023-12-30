@@ -68,16 +68,15 @@ make(InstanceName, ClassName):-
 % create_method/4
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
-create_method(ClassName, MethodName, MethodAttributes, MethodBody):-
-    assert((MethodName:MethodAttributes :- call_method(ClassName,
-                                      MethodAttributes,
-                                      MethodBody))).
+create_method(InstanceName, MethodName, [], MethodBody):-
+    Term=..[MethodName, InstanceName],
+    assert(Term :- call_method()
 
-call_method(_, _, []).
-call_method(InstanceName, MethodAttributes, [Rule|Rest]):-
-    instance(InstanceName, _, _),
-    call(Rule, InstanceName, MethodAttributes),
-    call_method(InstanceName, MethodAttributes, Rest).
+%call_method(_, _, []).
+%call_method(InstanceName, MethodAttributes, [Rule|Rest]):-
+    %instance(InstanceName, _, _),
+    %call(Rule, InstanceName, MethodAttributes),
+    %call_method(InstanceName, MethodAttributes, Rest).
 
 
 % is_class/1
