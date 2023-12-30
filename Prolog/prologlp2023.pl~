@@ -1,5 +1,6 @@
 :- dynamic class/3,
-           instance/3.
+           instance/3,
+           method/3.
 
 % def_class/2
 % definisce una classe con nome e genitori
@@ -40,8 +41,7 @@ check_parts(ClassName, [Part | Rest]):-
 % caso, crea il metodo stesso
 check_part(_, field(_, _)).
 check_part(_, field(_, _, _)).
-check_part(ClassName, method(MethodName, MethodAttributes, MethodBody)):-
-    create_method(ClassName, MethodName, MethodAttributes, MethodBody).
+check_part(_, method(_, _, _)).
 
 
 % check_legacy/2
@@ -57,7 +57,8 @@ check_legacy([Parent|Parents], Out) :-
 % ai campi
 make(InstanceName, ClassName):-
     not(instance(InstanceName, ClassName, _)),
-    class(ClassName, _, _),
+    class(ClassName, _, Parts),
+    examination(InstanceName, Parts),
     assert(instance(InstanceName, ClassName, [])).
 
 make(InstanceName, ClassName):-
@@ -65,12 +66,46 @@ make(InstanceName, ClassName):-
     class(ClassName, _, _),
     InstanceName=instance(InstanceName, ClassName, []).
 
+examination(_, []).
+
+examination(InstanceName, [Part|Parts]):-
+    Part=method(MethodName, MethodAttributes, MethodBody),
+    create_method(InstanceName,
+                  MethodName,
+                  MethodAttributes,
+                  MethodBody),
+    examination(InstanceName, Parts).
+
+examination(InstanceName, [Part|Parts]):-
+    Part=field(_,_),
+    examination(InstanceName, Parts).
+
+examination(InstanceName, [Part|Parts]):-
+    Part=field(_,_,_),
+    examination(InstanceName, Parts).
+
+
+
+%create_methods(InstanceName, [Method|Rest]):-
+    %Method=method(MethodName, MethodAttributes, MethodBody),
+    %create_method(InstanceName,
+                  %MethodName,
+                  %MethodAttributes,
+                  %MethodBody),
+    %create_methods(InstanceName, Rest).
+
 % create_method/4
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
 create_method(InstanceName, MethodName, [], MethodBody):-
     Term=..[MethodName, InstanceName],
+    %list_to_sequence(MethodBodyList, MethodBody),
     assert(Term :- MethodBody).
+
+list_to_sequence([], true).
+list_to_sequence([X], X).
+list_to_sequence([H | T], (H, Rest)) :-
+    list_to_sequence(T, Rest).
 
 %call_method(_, _, []).
 %call_method(InstanceName, MethodAttributes, [Rule|Rest]):-
