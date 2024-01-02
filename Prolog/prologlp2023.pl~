@@ -39,7 +39,7 @@ check_parts(ClassName, [Part | Rest]):-
 
 
 % check_part/2
-% verifica se una parte � un campo o un metodo
+% verifica se una parte e' un campo o un metodo
 check_part(_, field(_, _)).
 check_part(_, field(_, _, _)).
 check_part(_, method(_, _, _)).
@@ -97,13 +97,16 @@ transform_fields([FieldName = Value | Rest],
 
 % examination/2
 % esamina se le parti di una classe sono dei campi o dei metodi
+% e nel caso dei metodi crea il metodo
 examination(_, []).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
+    append([[], [MethodBody]], MethodBodyList),
+    replace_this(InstanceName, MethodBodyList, [], NewMethodBody),
     create_method(InstanceName,
                   MethodName,
                   MethodAttributes,
-                  MethodBody),
+                  NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
@@ -117,30 +120,21 @@ examination(InstanceName, [Part|Parts]):-
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
 create_method(InstanceName, MethodName, [], MethodBody):-
-    transform_instructions(MethodBody, InstanceName, TransformedBody),
     Term=..[MethodName, InstanceName],
-    %list_to_sequence(MethodBodyList, MethodBody),
-    assert(Term :- TransformedBody).
-
-% transform_instructions/3
-% gestisce la presenza di "this" all'interno di un metodo da creare
-% dopo una chiamata di make
-transform_instructions([], _, []).
-transform_instructions([I|Is], InstanceName, [NewI|NewIs]) :-
-    transform_instruction(I, InstanceName, NewI),
-    transform_instructions(Is, InstanceName, NewIs).
-transform_instruction(field(this, FieldName, Value),
-                      InstanceName,
-                      field(InstanceName, FieldName, Value)).
-transform_instruction(Instruction, _, Instruction).
+    assert(Term :- MethodBody).
 
 
-% list_to_sequence/2
-% trasforma una lista in una sequenza
-list_to_sequence([], true).
-list_to_sequence([X], X).
-list_to_sequence([H | T], (H, Rest)) :-
-    list_to_sequence(T, Rest).
+replace_this(_, [], List, NewMethodBody):-
+    NewMethodBody=List.
+replace_this(InstanceName, [Line|Lines], List, NewMethodBody):-
+    Line=field(this, FieldName, Value),
+    append([[field(InstanceName, FieldName, Value)], List], NewList),
+    replace_this(InstanceName, Lines, NewList, NewMethodBody).
+replace_this(InstanceName, [Line|Lines], List, NewMethodBody):-
+    Line=field(this, FieldName),
+    append([[field(InstanceName, FieldName)], List], NewList),
+    replace_this(InstanceName, Lines, NewList, NewMethodBody).
+
 
 
 % is_class/1

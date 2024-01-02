@@ -7,3 +7,12 @@ GENERALE
 3) field che restituiscono member...
 
 4) gestire il "this"
+
+
+CONTROLLI FINALI
+
+
+1) non posso passare due volte una classe parent nella def_class, sennò aggiungerei due volte tutti i fields e methods
+   codice: 
+   \+ member(Parent, Parents),  % Controllo per evitare loop
+   
