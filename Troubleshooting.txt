@@ -2,8 +2,8 @@ GENERALE
 
 1) capire dove inserire dei cut e dove no. (nei casi base)
 
-2) make/2 che richiama la make/3
+2) controllare che in caso di make con fields che hanno un type, il type passato sia effettivamente quello corretto.
 
-3) fare in modo che se in def_class c'è un metodo con parametri questi debbano essere aggiunti al metodo creato con create_methods.
+3) field che restituiscono member...
 
-4) pulire il codice
+4) gestire il "this"

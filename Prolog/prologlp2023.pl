@@ -85,6 +85,7 @@ validate_fields([FieldName = _| Rest], ClassFields) :-
     ),
     validate_fields(Rest, ClassFields).
 
+
 % transform_fields/2
 % trasfroma i campi da lista a funtore
 transform_fields([], []).
@@ -92,6 +93,7 @@ transform_fields([FieldName = Value | Rest],
                  [Field | TransformedRest]) :-
     Field =.. [field, FieldName, Value],
     transform_fields(Rest, TransformedRest).
+
 
 % examination/2
 % esamina se le parti di una classe sono dei campi o dei metodi
@@ -114,10 +116,23 @@ examination(InstanceName, [Part|Parts]):-
 % create_method/4
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
-create_method(InstanceName, MethodName, [], MethodBodyList):-
+create_method(InstanceName, MethodName, [], MethodBody):-
+    transform_instructions([MethodBody], InstanceName, TransformedBody),
     Term=..[MethodName, InstanceName],
-    list_to_sequence(MethodBodyList, MethodBody),
-    assert(Term :- MethodBody).
+    %list_to_sequence(MethodBodyList, MethodBody),
+    assert(Term :- TransformedBody).
+
+% transform_instructions/3
+% gestisce la presenza di "this" all'interno di un metodo da creare
+% dopo una chiamata di make
+transform_instructions([], _, []).
+transform_instructions([I|Is], InstanceName, [NewI|NewIs]) :-
+    transform_instruction(I, InstanceName, NewI),
+    transform_instructions(Is, InstanceName, NewIs).
+transform_instruction(field(this, FieldName, Value),
+                      InstanceName,
+                      field(InstanceName, FieldName, Value)).
+transform_instruction(Instruction, _, Instruction).
 
 
 % list_to_sequence/2
@@ -160,8 +175,8 @@ inst(InstanceName, Instance) :-
 % estrae il valore di un campo da una classe
 field(InstanceName, FieldName, Result) :-
     instance(InstanceName, _, Fields),
-    Result = member(instance(InstanceName, _, FieldName),
-                    Fields).
+    member(instance(InstanceName, _, field(FieldName, Value)),Fields),
+    Result=Value.
 
 % fieldx/3
 % estrae
