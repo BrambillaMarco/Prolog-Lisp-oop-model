@@ -101,12 +101,7 @@ transform_fields([FieldName = Value | Rest],
 examination(_, []).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
-    append([[], [MethodBody]], MethodBodyList),
-    replace_this(InstanceName, MethodBodyList, [], NewMethodBody),
-    create_method(InstanceName,
-                  MethodName,
-                  MethodAttributes,
-                  NewMethodBody),
+    create_method(InstanceName, MethodName, MethodAttributes, MethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
@@ -121,18 +116,27 @@ examination(InstanceName, [Part|Parts]):-
 % specifici dell'istanza
 create_method(InstanceName, MethodName, [], MethodBody):-
     Term=..[MethodName, InstanceName],
-    assert(Term :- MethodBody).
+    resolve_this(MethodBody, InstanceName, FixedMethodBody),
+    assert(Term :- FixedMethodBody).
 
-replace_this(_, [], List, NewMethodBody):-
-    NewMethodBody=List.
-replace_this(InstanceName, [Line|Lines], List, NewMethodBody):-
-    Line=field(this, FieldName, Value),
-    append([[field(InstanceName, FieldName, Value)], List], NewList),
-    replace_this(InstanceName, Lines, NewList, NewMethodBody).
-replace_this(InstanceName, [Line|Lines], List, NewMethodBody):-
-    Line=field(this, FieldName),
-    append([[field(InstanceName, FieldName)], List], NewList),
-    replace_this(InstanceName, Lines, NewList, NewMethodBody).
+resolve_this(MethodBody, InstanceName, FixedMethodBody) :-
+    resolve_this_helper(1, MethodBody, InstanceName, FixedMethodBody).
+
+resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
+    arg(N, MethodBody, Elemento),
+    Elemento = field(this, FieldName, Result),
+    NewElemento = field(InstanceName, FieldName, Result),
+    succ(N, Next),    % Incrementa N
+    resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | NewElemento]).
+
+resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
+    arg(N, MethodBody, Elemento),
+    not(Elemento = field(this, _, _)),
+    succ(N, Next),    % Incrementa N
+    resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | [Elemento]]).
+
+
+
 
 
 
@@ -173,3 +177,10 @@ field(InstanceName, FieldName, Result) :-
 
 % fieldx/3
 % estrae
+
+
+
+
+
+
+
