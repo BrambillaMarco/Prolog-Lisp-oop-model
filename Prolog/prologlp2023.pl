@@ -17,7 +17,7 @@ def_class(ClassName, Parents, Parts):-
     exist_parents(Parents),
     check_parts(ClassName, Parts),
     legacy(Parents, InheritedParts),
-    append(InheritedParts, Parts, AllParts),
+    ord_union(InheritedParts, Parts, AllParts),
     assert(class(ClassName, Parents, AllParts)).
 
 
@@ -51,7 +51,7 @@ legacy([], []).
 legacy([Parent|Parents], Out) :-
     class(Parent, _, ParentParts),
     legacy(Parents, Rest),
-    append(ParentParts, Rest, Out).
+    ord_union(ParentParts, Rest, Out).
 
 
 % make/2
@@ -69,9 +69,10 @@ make(InstanceName, ClassName, Fields) :-
     class(ClassName, _, ClassParts),
     is_list(Fields),
     validate_fields(Fields, ClassParts),
-    transform_fields(Fields, Out),
-    examination(InstanceName, ClassParts),
-    assert(instance(InstanceName, ClassName, Out)).
+    transform_fields(ClassParts, TransformedFields),
+    union_fields(Fields, TransformedFields, AllFields),
+    %examination(InstanceName, ClassParts),
+    assert(instance(InstanceName, ClassName, AllFields)).
 
 
 % validate_fields/2
@@ -86,13 +87,37 @@ validate_fields([FieldName = _| Rest], ClassFields) :-
     validate_fields(Rest, ClassFields).
 
 
-% transform_fields/2
-% trasfroma i campi da lista a funtore
 transform_fields([], []).
-transform_fields([FieldName = Value | Rest],
-                 [Field | TransformedRest]) :-
-    Field =.. [field, FieldName, Value],
+transform_fields([Field | Rest],
+                 [KeyValue | TransformedRest]) :-
+    transform_field(Field, KeyValue),
     transform_fields(Rest, TransformedRest).
+
+
+transform_field(field(Name, Value), Name=Value).
+transform_field(field(Name, Value, _), Name=Value).
+transform_field(method(Name, _, _), method=Name).
+
+
+% union_fields/3
+% unisce i campi della make con i campi della classe, non
+% duplicandoli
+union_fields([], List2, List2).
+union_fields([Field | Rest1], List2, Union) :-
+    replace_value(Field, List2, UpdatedList),
+    union_fields(Rest1, UpdatedList, Union).
+
+
+replace_value(NewField, [], [NewField]).
+replace_value(NewField, [OldField | Rest], [UpdatedField | Rest]) :-
+    equivalent_field(NewField, OldField),
+    !,
+    UpdatedField = NewField.
+replace_value(NewField, [OldField | Rest], [OldField | UpdatedRest]) :-
+    replace_value(NewField, Rest, UpdatedRest).
+
+
+equivalent_field(Name=_, Name=_).
 
 
 % examination/2
@@ -172,15 +197,17 @@ inst(InstanceName, Instance) :-
 % estrae il valore di un campo da una classe
 field(InstanceName, FieldName, Result) :-
     instance(InstanceName, _, Fields),
-    member(instance(InstanceName, _, field(FieldName, Value)),Fields),
-    Result=Value.
+    memberchk(FieldName=Value, Fields),
+    Result = Value.
 
 % fieldx/3
 % estrae
+fieldx(InstanceName, FieldNames, Values) :-
+    is_list(FieldNames),
+    instance(InstanceName, _, Fields),
+    find_field_values(FieldNames, Fields, Values).
 
-
-
-
-
-
-
+find_field_values([], _, []).
+find_field_values([FieldName | Rest], Fields, [Value | RestValues]) :-
+    memberchk(FieldName=Value, Fields),
+    find_field_values(Rest, Fields, RestValues).
