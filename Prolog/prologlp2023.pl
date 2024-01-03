@@ -87,6 +87,8 @@ validate_fields([FieldName = _| Rest], ClassFields) :-
     validate_fields(Rest, ClassFields).
 
 
+% transform_fields/2
+% trasforma i campi da field(Name, Value) a Name=Value
 transform_fields([], []).
 transform_fields([Field | Rest],
                  [KeyValue | TransformedRest]) :-
@@ -94,6 +96,8 @@ transform_fields([Field | Rest],
     transform_fields(Rest, TransformedRest).
 
 
+% transform_field/2
+% trasforma i campi da field(Name, Value) a Name=Value
 transform_field(field(Name, Value), Name=Value).
 transform_field(field(Name, Value, _), Name=Value).
 transform_field(method(Name, _, _), method=Name).
@@ -108,8 +112,12 @@ union_fields([Field | Rest1], List2, Union) :-
     union_fields(Rest1, UpdatedList, Union).
 
 
+% replace_value/3
+% se i campi esistono nella classe sovrascrive il risultato
+% della make
 replace_value(NewField, [], [NewField]).
-replace_value(NewField, [OldField | Rest], [UpdatedField | Rest]) :-
+replace_value(NewField, [OldField | Rest],
+              [UpdatedField | Rest]) :-
     equivalent_field(NewField, OldField),
     !,
     UpdatedField = NewField.
@@ -117,6 +125,8 @@ replace_value(NewField, [OldField | Rest], [OldField | UpdatedRest]) :-
     replace_value(NewField, Rest, UpdatedRest).
 
 
+% equivalent_field/2
+% verifica se i due nomi sono equivalenti
 equivalent_field(Name=_, Name=_).
 
 
@@ -161,10 +171,6 @@ resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
     resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | [Elemento]]).
 
 
-
-
-
-
 % is_class/1
 % verifica se esiste la classe
 is_class(ClassName) :-
@@ -199,6 +205,7 @@ field(InstanceName, FieldName, Result) :-
     instance(InstanceName, _, Fields),
     memberchk(FieldName=Value, Fields),
     Result = Value.
+
 
 % fieldx/3
 % estrae

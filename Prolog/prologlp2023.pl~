@@ -39,7 +39,7 @@ check_parts(ClassName, [Part | Rest]):-
 
 
 % check_part/2
-% verifica se una parte � un campo o un metodo
+% verifica se una parte e' un campo o un metodo
 check_part(_, field(_, _)).
 check_part(_, field(_, _, _)).
 check_part(_, method(_, _, _)).
@@ -52,7 +52,6 @@ legacy([Parent|Parents], Out) :-
     class(Parent, _, ParentParts),
     legacy(Parents, Rest),
     ord_union(ParentParts, Rest, Out).
-
 
 
 % make/2
@@ -88,6 +87,8 @@ validate_fields([FieldName = _| Rest], ClassFields) :-
     validate_fields(Rest, ClassFields).
 
 
+% transform_fields/2
+% trasforma i campi da field(Name, Value) a Name=Value
 transform_fields([], []).
 transform_fields([Field | Rest],
                  [KeyValue | TransformedRest]) :-
@@ -95,6 +96,8 @@ transform_fields([Field | Rest],
     transform_fields(Rest, TransformedRest).
 
 
+% transform_field/2
+% trasforma i campi da field(Name, Value) a Name=Value
 transform_field(field(Name, Value), Name=Value).
 transform_field(field(Name, Value, _), Name=Value).
 transform_field(method(Name, _, _), method=Name).
@@ -110,7 +113,8 @@ union_fields([Field | Rest1], List2, Union) :-
 
 
 replace_value(NewField, [], [NewField]).
-replace_value(NewField, [OldField | Rest], [UpdatedField | Rest]) :-
+replace_value(NewField, [OldField | Rest],
+              [UpdatedField | Rest]) :-
     equivalent_field(NewField, OldField),
     !,
     UpdatedField = NewField.
@@ -123,6 +127,7 @@ equivalent_field(Name=_, Name=_).
 
 % examination/2
 % esamina se le parti di una classe sono dei campi o dei metodi
+% e nel caso dei metodi crea il metodo
 examination(_, []).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
@@ -139,7 +144,7 @@ examination(InstanceName, [Part|Parts]):-
 % create_method/4
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
-create_method(InstanceName, MethodName, [], MethodBodyList):-
+create_method(InstanceName, MethodName, [], MethodBody):-
     Term=..[MethodName, InstanceName],
     resolve_this(MethodBody, InstanceName, FixedMethodBody),
     assert(Term :- FixedMethodBody).
@@ -159,9 +164,6 @@ resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
     not(Elemento = field(this, _, _)),
     succ(N, Next),    % Incrementa N
     resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | [Elemento]]).
-
-
-
 
 
 % is_class/1
@@ -199,9 +201,11 @@ field(InstanceName, FieldName, Result) :-
     memberchk(FieldName=Value, Fields),
     Result = Value.
 
+
 % fieldx/3
 % estrae
 fieldx(InstanceName, FieldNames, Values) :-
+    is_list(FieldNames),
     instance(InstanceName, _, Fields),
     find_field_values(FieldNames, Fields, Values).
 
