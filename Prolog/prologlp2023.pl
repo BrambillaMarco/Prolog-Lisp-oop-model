@@ -47,7 +47,7 @@ check_part(_, field(_, Value, float)) :-
     float(Value).
 check_part(_, field(_, Value, atom)) :-
     atom(Value).
-check_part(_, field(_, Value, atom)) :-
+check_part(_, field(_, Value, string)) :-
     string(Value).
 check_part(_, field(_, Value, Type)) :-
     class(Type, _, _),
@@ -90,12 +90,26 @@ make(InstanceName, ClassName, Fields) :-
 % verifica se i campi dell'istanza esistono
 % nella classe
 validate_fields([], _).
-validate_fields([FieldName = _| Rest], ClassFields) :-
+validate_fields([FieldName = Value| Rest], ClassFields) :-
     (
         member(field(FieldName, _), ClassFields);
-        member(field(FieldName, _, _), ClassFields)
+        member(field(FieldName, _, Type), ClassFields),
+        compatible_type(Value, Type)
     ),
     validate_fields(Rest, ClassFields).
+
+
+compatible_type(Value, integer) :-
+    integer(Value).
+compatible_type(Value, float) :-
+    float(Value).
+compatible_type(Value, atom) :-
+    atom(Value).
+compatible_type(Value, string) :-
+    string(Value).
+compatible_type(Value, Type) :-
+    class(Type, _, _),
+    instance(Value, _, _).
 
 
 % transform_fields/2
@@ -226,6 +240,7 @@ fieldx(InstanceName, FieldNames, Values) :-
     find_field_values(FieldNames, Fields, Values).
 
 find_field_values([], _, []).
-find_field_values([FieldName | Rest], Fields, [Value | RestValues]) :-
+find_field_values([FieldName | Rest], Fields,
+                  [Value | RestValues]) :-
     memberchk(FieldName=Value, Fields),
     find_field_values(Rest, Fields, RestValues).
