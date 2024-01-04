@@ -41,7 +41,14 @@ check_parts(ClassName, [Part | Rest]):-
 % check_part/2
 % verifica se una parte e' un campo o un metodo
 check_part(_, field(_, _)).
-check_part(_, field(_, _, _)).
+check_part(_, field(_, Value, integer)) :-
+    integer(Value).
+check_part(_, field(_, Value, float)) :-
+    float(Value).
+check_part(_, field(_, Value, string)) :-
+    string(Value).
+check_part(_, field(_, Value, atom)) :-
+    atom(Value).
 check_part(_, method(_, _, _)).
 
 
@@ -71,7 +78,7 @@ make(InstanceName, ClassName, Fields) :-
     validate_fields(Fields, ClassParts),
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
-    %examination(InstanceName, ClassParts),
+    examination(InstanceName, ClassParts),
     assert(instance(InstanceName, ClassName, AllFields)).
 
 
@@ -112,6 +119,9 @@ union_fields([Field | Rest1], List2, Union) :-
     union_fields(Rest1, UpdatedList, Union).
 
 
+% replace_value/3
+% se i campi esistono nella classe sovrascrive il risultato
+% della make
 replace_value(NewField, [], [NewField]).
 replace_value(NewField, [OldField | Rest],
               [UpdatedField | Rest]) :-
@@ -122,6 +132,8 @@ replace_value(NewField, [OldField | Rest], [OldField | UpdatedRest]) :-
     replace_value(NewField, Rest, UpdatedRest).
 
 
+% equivalent_field/2
+% verifica se i due nomi sono equivalenti
 equivalent_field(Name=_, Name=_).
 
 
@@ -146,8 +158,8 @@ examination(InstanceName, [Part|Parts]):-
 % specifici dell'istanza
 create_method(InstanceName, MethodName, [], MethodBody):-
     Term=..[MethodName, InstanceName],
-    resolve_this(MethodBody, InstanceName, FixedMethodBody),
-    assert(Term :- FixedMethodBody).
+    %resolve_this(MethodBody, InstanceName, FixedMethodBody),
+    assert(Term :- MethodBody).
 
 resolve_this(MethodBody, InstanceName, FixedMethodBody) :-
     resolve_this_helper(1, MethodBody, InstanceName, FixedMethodBody).

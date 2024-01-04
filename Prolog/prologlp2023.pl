@@ -41,8 +41,19 @@ check_parts(ClassName, [Part | Rest]):-
 % check_part/2
 % verifica se una parte e' un campo o un metodo
 check_part(_, field(_, _)).
-check_part(_, field(_, _, _)).
+check_part(_, field(_, Value, integer)) :-
+    integer(Value).
+check_part(_, field(_, Value, float)) :-
+    float(Value).
+check_part(_, field(_, Value, atom)) :-
+    atom(Value).
+check_part(_, field(_, Value, atom)) :-
+    string(Value).
+check_part(_, field(_, Value, Type)) :-
+    class(Type, _, _),
+    instance(Value, Type, _).
 check_part(_, method(_, _, _)).
+
 
 
 % legacy/2
@@ -71,7 +82,7 @@ make(InstanceName, ClassName, Fields) :-
     validate_fields(Fields, ClassParts),
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
-    %examination(InstanceName, ClassParts),
+    examination(InstanceName, ClassParts),
     assert(instance(InstanceName, ClassName, AllFields)).
 
 
@@ -151,8 +162,8 @@ examination(InstanceName, [Part|Parts]):-
 % specifici dell'istanza
 create_method(InstanceName, MethodName, [], MethodBody):-
     Term=..[MethodName, InstanceName],
-    resolve_this(MethodBody, InstanceName, FixedMethodBody),
-    assert(Term :- FixedMethodBody).
+    %resolve_this(MethodBody, InstanceName, FixedMethodBody),
+    assert(Term :- MethodBody).
 
 resolve_this(MethodBody, InstanceName, FixedMethodBody) :-
     resolve_this_helper(1, MethodBody, InstanceName, FixedMethodBody).
