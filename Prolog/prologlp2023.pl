@@ -82,8 +82,8 @@ make(InstanceName, ClassName, Fields) :-
     validate_fields(Fields, ClassParts),
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
-    examination(InstanceName, ClassParts),
-    assert(instance(InstanceName, ClassName, AllFields)).
+    assert(instance(InstanceName, ClassName, AllFields)),
+    examination(InstanceName, ClassParts).
 
 
 % validate_fields/2
@@ -156,12 +156,18 @@ equivalent_field(Name=_, Name=_).
 
 
 % examination/2
-% esamina se le parti di una classe sono dei campi o dei metodi
-% e nel caso dei metodi crea il metodo
+% in una make viene chiamato per esaminare
 examination(_, []).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
-    create_method(InstanceName, MethodName, MethodAttributes, MethodBody),
+    create_method(InstanceName,
+                  MethodName,
+                  MethodAttributes,
+                  MethodBody,
+                  [],
+                  NewMethodBody),
+    Term=..[MethodName, InstanceName],
+    assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
@@ -174,26 +180,66 @@ examination(InstanceName, [Part|Parts]):-
 % create_method/4
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
-create_method(InstanceName, MethodName, [], MethodBody):-
-    Term=..[MethodName, InstanceName],
-    %resolve_this(MethodBody, InstanceName, FixedMethodBody),
-    assert(Term :- MethodBody).
 
-resolve_this(MethodBody, InstanceName, FixedMethodBody) :-
-    resolve_this_helper(1, MethodBody, InstanceName, FixedMethodBody).
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
+    arg(1, MethodBody, Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
+    Riga=field(this, FieldName, Value),
+    append([List,[field(InstanceName, FieldName, Value)]], NewList),
+    arg(2, MethodBody, Next),
+    create_method(InstanceName,
+                  MethodName,
+                  [],
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
+    arg(1, MethodBody, Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
+    append([List, [Riga]], NewList),
+    arg(2, MethodBody, Next),
+    create_method(InstanceName,
+                  MethodName,
+                  [],
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
+    append([List, [MethodBody]], NewList),
+    create_method_finisher(InstanceName,
+                           MethodName,
+                           [],
+                           MethodBody,
+                           NewList,
+                           NewMethodBody).
+create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
+    list_to_sequence(NewList, X),
+    X=NewMethodBody.
 
-resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
-    arg(N, MethodBody, Elemento),
-    Elemento = field(this, FieldName, Result),
-    NewElemento = field(InstanceName, FieldName, Result),
-    succ(N, Next),    % Incrementa N
-    resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | NewElemento]).
+list_to_sequence([], true).
+list_to_sequence([X], X).
+list_to_sequence([H | T], (H, Rest)) :-
+    list_to_sequence(T, Rest).
 
-resolve_this_helper(N, MethodBody, InstanceName, FixedMethodBody) :-
-    arg(N, MethodBody, Elemento),
-    not(Elemento = field(this, _, _)),
-    succ(N, Next),    % Incrementa N
-    resolve_this_helper(Next, MethodBody, InstanceName, [FixedMethodBody | [Elemento]]).
 
 
 % is_class/1

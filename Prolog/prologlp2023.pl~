@@ -47,7 +47,7 @@ check_part(_, field(_, Value, float)) :-
     float(Value).
 check_part(_, field(_, Value, atom)) :-
     atom(Value).
-check_part(_, field(_, Value, atom)) :-
+check_part(_, field(_, Value, string)) :-
     string(Value).
 check_part(_, field(_, Value, Type)) :-
     class(Type, _, _),

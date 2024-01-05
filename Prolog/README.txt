@@ -1,6 +1,6 @@
 Brambilla Marco, mat. 
 Colciago Federico, mat. 858643
-Condello Paolo, mat. 
+Condello Paolo, mat. 829800
 
 predicato def_class(NomeClasse, [Genitori], [Parti]):
     crea una classe con nome = NomeClasse;

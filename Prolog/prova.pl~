@@ -71,8 +71,8 @@ make(InstanceName, ClassName, Fields) :-
     validate_fields(Fields, ClassParts),
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
-    examination(InstanceName, ClassParts),
-    assert(instance(InstanceName, ClassName, AllFields)).
+    assert(instance(InstanceName, ClassName, AllFields)),
+    examination(InstanceName, ClassParts).
 
 
 % validate_fields/2
@@ -138,7 +138,12 @@ examination(InstanceName, [Part|Parts]):-
     create_method(InstanceName,
                   MethodName,
                   MethodAttributes,
-                  MethodBody),
+                  MethodBody,
+                  [],
+                  NewMethodBody),
+    Term=..[MethodName, InstanceName],
+    NewMethodBody=[NewMethodBodySequence],
+    assert(Term:-NewMethodBodySequence),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
@@ -152,21 +157,64 @@ examination(InstanceName, [Part|Parts]):-
 % crea dinamicamente le regole per i metodi
 % specifici dell'istanza
 
-create_method(InstanceName, MethodName, [], MethodBody):-
-    Term=..[MethodName, InstanceName],
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
     arg(1, MethodBody, Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
     Riga=field(this, FieldName, Value),
-    assert(Term :- field(InstanceName, FieldName, Value)),
+    append([List,[field(InstanceName, FieldName, Value)]], NewList),
     arg(2, MethodBody, Next),
-    create_method(InstanceName, MethodName, [], Next).
-create_method(InstanceName, MethodName, [], MethodBody):-
-    Term=..[MethodName, InstanceName],
+    create_method(InstanceName,
+                  MethodName,
+                  [],
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
     arg(1, MethodBody, Riga),
-    assert(Term :- Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
+    append([List, [Riga]], NewList),
     arg(2, MethodBody, Next),
-    create_method(InstanceName, MethodName, [], Next).
-create_method(_, _, _, _).
+    create_method(InstanceName,
+                  MethodName,
+                  [],
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              [],
+              MethodBody,
+              List,
+              NewMethodBody):-
+    append([List, [MethodBody]], NewList),
+    create_method_finisher(InstanceName,
+                           MethodName,
+                           [],
+                           MethodBody,
+                           NewList,
+                           NewMethodBody).
+create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
+    list_to_sequence(NewList, X),
+    X=NewMethodBody.
 
+list_to_sequence([], true).
+list_to_sequence([X], X).
+list_to_sequence([H | T], (H, Rest)) :-
+    list_to_sequence(T, Rest).
 
 
 % is_class/1

@@ -1,18 +1,22 @@
 GENERALE
 
-1) capire dove inserire dei cut e dove no. (nei casi base)
+1) gestire  i parametri nei metodi passati alla def_class
 
-2) controllare che in caso di make con fields che hanno un type, il type passato sia effettivamente quello corretto.
+2) richiamare i predicati is_class e is_istance ove necessario
 
-3) field che restituiscono member...
+3) inserire controlli generici sul tipo di attributi passati
 
-4) gestire il "this"
+3) capire dove inserire dei cut e dove no. (nei casi base)
 
 
 CONTROLLI FINALI
 
-
 1) non posso passare due volte una classe parent nella def_class, sennò aggiungerei due volte tutti i fields e methods
    codice: 
    \+ member(Parent, Parents),  % Controllo per evitare loop
+
+2) controllare cosa succede se nel corpo di un metodo passato alla def_class ci sono
+   delle istruzioni non lecite in prolog
+
+3) debug vario a prova antoniotti
    
