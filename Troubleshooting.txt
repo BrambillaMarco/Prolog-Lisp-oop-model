@@ -1,6 +1,6 @@
 GENERALE
 
-1) gestire  i parametri nei metodi passati alla def_class
+1) gestire i parametri nei metodi passati alla def_class
 
 2) richiamare i predicati is_class e is_istance ove necessario
 

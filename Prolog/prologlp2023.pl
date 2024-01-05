@@ -2,6 +2,9 @@
     class/3,
     instance/3,
     method/3.
+:-discontiguous
+    create_method/6,
+    create_method_finisher/6.
 
 % def_class/2
 % definisce una classe con nome e genitori
@@ -156,17 +159,31 @@ equivalent_field(Name=_, Name=_).
 
 
 % examination/2
-% in una make viene chiamato per esaminare
+% in una make viene chiamato per esaminare field e method
+% e nel caso incontri quest'ultimi, crea il metodo per l'istanza
+% InstanceName
 examination(_, []).
 examination(InstanceName, [Part|Parts]):-
-    Part=method(MethodName, MethodAttributes, MethodBody),
+    Part=method(MethodName, [], MethodBody),
     create_method(InstanceName,
                   MethodName,
-                  MethodAttributes,
+                  [],
                   MethodBody,
                   [],
                   NewMethodBody),
     Term=..[MethodName, InstanceName],
+    assert(Term:-NewMethodBody),
+    examination(InstanceName, Parts).
+examination(InstanceName, [Part|Parts]):-
+    Part=method(MethodName, MethodAttributes, MethodBody),
+    list_to_sequence(MethodAttributes, MethodAttributesSequence),
+    create_method(InstanceName,
+                  MethodName,
+                  MethodAttributesSequence,
+                  MethodBody,
+                  [],
+                  NewMethodBody),
+    Term=..[MethodName, InstanceName, MethodAttributesSequence],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
@@ -231,9 +248,64 @@ create_method(InstanceName,
                            MethodBody,
                            NewList,
                            NewMethodBody).
+create_method_finisher(_, _, [], _, NewList, NewMethodBody):-
+    list_to_sequence(NewList, X),
+    X=NewMethodBody.
+
+create_method(InstanceName,
+              MethodName,
+              MethodAttributes,
+              MethodBody,
+              List,
+              NewMethodBody):-
+    arg(1, MethodBody, Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
+    Riga=field(this, FieldName, Value),
+    append([List,[field(InstanceName, FieldName, Value)]], NewList),
+    arg(2, MethodBody, Next),
+    create_method(InstanceName,
+                  MethodName,
+                  MethodAttributes,
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              MethodAttributes,
+              MethodBody,
+              List,
+              NewMethodBody):-
+    arg(1, MethodBody, Riga),
+    not(var(Riga)),
+    not(atom(Riga)),
+    not(string(Riga)),
+    append([List, [Riga]], NewList),
+    arg(2, MethodBody, Next),
+    create_method(InstanceName,
+                  MethodName,
+                  MethodAttributes,
+                  Next,
+                  NewList,
+                  NewMethodBody).
+create_method(InstanceName,
+              MethodName,
+              MethodAttributes,
+              MethodBody,
+              List,
+              NewMethodBody):-
+    append([List, [MethodBody]], NewList),
+    create_method_finisher(InstanceName,
+                           MethodName,
+                           MethodAttributes,
+                           MethodBody,
+                           NewList,
+                           NewMethodBody).
 create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
     list_to_sequence(NewList, X),
     X=NewMethodBody.
+
 
 list_to_sequence([], true).
 list_to_sequence([X], X).
