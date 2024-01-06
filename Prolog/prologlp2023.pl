@@ -307,10 +307,10 @@ create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
     X=NewMethodBody.
 
 
-list_to_sequence([], true).
 list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
+list_to_sequence([], true).
 
 
 

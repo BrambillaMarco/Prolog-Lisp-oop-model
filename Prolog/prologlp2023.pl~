@@ -2,6 +2,9 @@
     class/3,
     instance/3,
     method/3.
+:-discontiguous
+    create_method/6,
+    create_method_finisher/6.
 
 % def_class/2
 % definisce una classe con nome e genitori
@@ -304,10 +307,10 @@ create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
     X=NewMethodBody.
 
 
-list_to_sequence([], true).
 list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
+%list_to_sequence([], true).
 
 
 
