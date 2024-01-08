@@ -345,6 +345,7 @@ inst(InstanceName, Instance) :-
 % field/3
 % estrae il valore di un campo da una classe
 field(InstanceName, FieldName, Result) :-
+    var(Result),
     instance(InstanceName, _, Fields),
     memberchk(FieldName=Value, Fields),
     Result = Value.
@@ -353,6 +354,7 @@ field(InstanceName, FieldName, Result) :-
 % fieldx/3
 % estrae
 fieldx(InstanceName, FieldNames, Values) :-
+    var(Values),
     is_list(FieldNames),
     instance(InstanceName, _, Fields),
     find_field_values(FieldNames, Fields, Values).
