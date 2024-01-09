@@ -1,0 +1,92 @@
+;;; Definizione e manipolazione Hash-Table
+(defparameter *classes-specs* (make-hash-table))
+(defun add-class-spec (name class-spec)
+  (setf (gethash name *classes-specs*) class-spec))
+(defun get-class-spec (name)
+  (gethash name *classes-specs*))
+
+;;; Primitiva definizione classe
+(defun def-class (class-name parents &rest parts)
+  (cond
+    ((not (symbolp class-name))
+     (error "Error: nome classe non e' un simbolo"))
+    ((not (listp parents))
+     (error "Error: parent non e' una lista"))
+    ((parents-control class-name parents)
+     (error "Error: classe e parents con stesso nome"))
+    ((check-parts parts)
+     (error "Error: bad values formatting")))
+  (let*
+      ((genitori
+	(if (null parents)
+	    NIL
+	    (remove-duplicates parents)))
+       (formatted-slot (identify-method (formatta parts) nil)))
+    (remhash class-name *classes-specs*)
+    (add-class-spec class-name (list genitori formatted-slot)))
+  class-name)
+
+
+
+;;; Funzione parents-control controlla che tutti i parents
+;;; siano simboli, che tutte i parents siano classi e che
+;;; non ci siano parents con lo stesso class-name
+(defun parents-control (class-name parents)
+  (cond
+    ((equal parents NIL)
+     NIL)
+    ((not (symbolp (first parents)))
+     (error "Errore: i parents devono essere lista di simboli"))
+    ((not (get-class-spec (first parents)))
+     (error "Errore: classe genitore non esistente"))
+    ((or (equal (first parents) class-name)
+	 (parents-control class-name (rest parents))))))
+
+
+;;; Funzione che ontrolla se ogni parte dell'input è una lista
+;;; che inizia con 'fields o 'methods."
+(defun check-parts (parts)
+  ; Controlla se l'elenco delle parti è valido
+  (and (valid-parts-list-p parts) 
+       (<= (length parts) 2))) ; controllo massimo due parti   
+
+
+
+;;; Verifica ricorsivamente se ogni parte nell'elenco è una 
+;;; lista valida che inizia con 'fields o 'methods."
+(defun valid-parts-list-p (parts)
+  (if (null parts)
+      t  ; Se non ci sono più parti, restituisce vero
+      (and (valid-part-p (car parts))           
+           (valid-parts-list-p (cdr parts)))))  
+
+
+;;; Verifica se la parte è una lista che inizia 
+;;; con 'fields o 'methods."
+(defun valid-part-p (part)
+  (and (listp part)
+       ; Controlla se il primo elemento è 'fields o 'methods
+       (member (car part) '(fields methods))))  
+
+
+;;; Funzione che estrae i fields dalle parts
+(defun extract-fields (input)
+  (let ((fields-part (assoc 'fields input)))
+    (when fields-part
+      (extract-pairs (cdr fields-part)))))
+
+;;; Funzione che estrae i methods dalle parts
+(defun extract-methods (input)
+  (let ((methods-part (assoc 'methods input)))
+    (when methods-part
+      (extract-pairs (cdr methods-part)))))
+
+;;; Funzione di appoggio a extract-fields/methods
+;;; che estra ogni coppia
+(defun extract-pairs (lst)
+  (cond ((null lst) nil)
+        ((listp (car lst)) (cons (car lst) (extract-pairs (cdr lst))))
+        (t (extract-pairs (cdr lst)))))
+
+
+

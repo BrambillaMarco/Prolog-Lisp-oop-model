@@ -1,6 +1,3 @@
-;;;; Pugno Michele 830513
-;;;; Piovani Davide 830113
-
 ;;; Definizione e manipolazione Hash-Table
 (defparameter *classes-specs* (make-hash-table))
 (defun add-class-spec (name class-spec)
@@ -8,15 +5,8 @@
 (defun get-class-spec (name)
   (gethash name *classes-specs*))
 
-;;; Funzione formattazione per lista associativa
-(defun formatta (slot-value)
-  (if (null slot-value)
-      nil
-      (append (list (list (first slot-value) (second slot-value)))
-	      (formatta (cdr( cdr slot-value))))))
-
 ;;; Primitiva definizione classe
-(defun def-class (class-name parents &rest slot-value)
+(defun def-class (class-name parents &rest parts)
   (cond
     ((not (symbolp class-name))
      (error "Error: nome classe non e' un simbolo"))
@@ -24,26 +14,23 @@
      (error "Error: parent non e' una lista"))
     ((parents-control class-name parents)
      (error "Error: classe e parents con stesso nome"))
-    ((values-control (formatta slot-value))
+    ((check-parts parts)
      (error "Error: bad values formatting")))
   (let*
       ((genitori
 	(if (null parents)
 	    NIL
 	    (remove-duplicates parents)))
-       (formatted-slot (identify-method (formatta slot-value) nil)))
+       (formatted-slot (identify-method (formatta parts) nil)))
     (remhash class-name *classes-specs*)
     (add-class-spec class-name (list genitori formatted-slot)))
   class-name)
 
-;;; Controllo che first sia simbolo in slot-value formattata
-(defun values-control (values)
-  (if (equal values NIL)
-      NIL
-      (or (not(symbolp (first (first values))))
-	  (values-control (rest values)))))
 
-;;; Controllo esistenza parents e omonimia con class-name
+
+;;; Funzione parents-control controlla che tutti i parents
+;;; siano simboli, che tutte i parents siano classi e che
+;;; non ci siano parents con lo stesso class-name
 (defun parents-control (class-name parents)
   (cond
     ((equal parents NIL)
@@ -55,130 +42,96 @@
     ((or (equal (first parents) class-name)
 	 (parents-control class-name (rest parents))))))
 
-;;; Identifico i metodi e li tratto
-(defun identify-method (values result)
-  (cond
-    ((null values)
-     result)
-    ((and (listp (second (first values)))
-	  (equal (first (second (first values))) '=>))
-     (identify-method
-      (rest values)
-      (append result (list (list
-			    (first (first values))
-			    (process-method
-			     (first (first values))
-			     (second (first values))))))))
-    ((not (null values))
-     (identify-method (rest values)
-		      (append result
-			      (list (first values)))))))
 
-;;; Primitiva New
-(defun new (class-name &rest parameters)
-  (let* ((formatted (formatta parameters)))
-    (cond
-      ((not (symbolp class-name))
-       (error "Errore: class-name non e' un simbolo"))
-      ((values-control formatted)
-       (error "Error: bad input format")))
-    (if (and (get-class-spec class-name)
-	     (instance-check class-name formatted))
-	(list 'oolinst
-	      class-name
-	      (identify-method formatted nil))
-	(error "Errore: classe o parametro incompatibile"))))
+;;; Funzione che controlla se ogni parte dell'input è una lista
+;;; che inizia con 'fields o 'methods."
+(defun check-parts (parts)
+  ; Controlla se l'elenco delle parti è valido
+  (and (valid-parts-list-p parts) 
+       (<= (length parts) 2))) ; controllo massimo due parti   
 
-;;; Controllo valori e metodi di New 
-(defun instance-check (class parameters)
-  (if (equal parameters NIL)
-      T
-      (let* ((class-value (getv (list 'oolinst class NIL)
-				(first(first parameters))))
-	     (instance-value (if (listp (second (first parameters)))
-				 (first (second (first parameters)))
-				 (second (first parameters)))))
-	(and
-	 (or (and (functionp class-value) (equal '=> instance-value))
-	     (and (not (functionp class-value))
-		  (not (equal '=> instance-value))))
-	 (instance-check class (rest parameters))))))
 
-;;; Primitiva getv
-(defun getv (instance slot-name)
-  (cond
-    ((or (not (symbolp slot-name))
-	 (null slot-name))
-     (error "Errore: slot-name non valido"))
-    ((not (equal 'oolinst (first instance)))
-     (error "Errore: istanza non valida")))
-  (let* ((is-in-instance
-	  (recursive-getv-instance (third instance) slot-name)))
-    (if is-in-instance
-	(second is-in-instance)
-	(let* ((is-in-tree
-		(recursive-getv-tree (list (second instance))
-				     slot-name)))
-	  (if is-in-tree
-	      (second is-in-tree)
-	      (error "Errore: valore non valido"))))))
 
-;;; Ritorna una coppia di valori di istanza
-(defun recursive-getv-instance (values slot-name)
-  (cond
-    ((equal values NIL)
-     NIL)
-    ((equal (first (first values)) slot-name)
-     (first values))
-    ((not (equal (first (first values)) slot-name))
-     (recursive-getv-instance (rest values) slot-name))))
+;;; Verifica ricorsivamente se ogni parte nell'elenco è una 
+;;; lista valida che inizia con 'fields o 'methods."
+(defun valid-parts-list-p (parts)
+  (if (null parts)
+      t  ; Se non ci sono più parti, restituisce vero
+      (and (valid-part-p (car parts))           
+           (valid-parts-list-p (cdr parts)))))  
 
-;;; Ritorna una coppia di valori di una classe in gerarchia
-(defun recursive-getv-tree (classes slot-name)
-  (let* ((is-in-level
-	  (recursive-getv-instance
-	   (second (get-class-spec (first classes)))
-	   slot-name)))
-    (cond
-      ((equal classes  NIL)
-       NIL)
-      (is-in-level
-       is-in-level)
-      ((not is-in-level)
-       (recursive-getv-tree
-	(append (first (get-class-spec (first classes)))
-		(rest classes))
-	slot-name)))))
 
-;;; Primitiva getvx, funge da trampolino
-(defun getvx (instance &rest slot-name)
-  (if (null slot-name)
-      (error "Errore: slot-name+ vuoto"))
-  (getvx-recursive instance slot-name))
+;;; Verifica se la parte è una lista che inizia 
+;;; con 'fields o 'methods."
+(defun valid-part-p (part)
+  (and (listp part)
+       ; Controlla se il primo elemento è 'fields o 'methods
+       (member (car part) '(fields methods))))  
 
-;;; Effettiva getvx applicata ricorsivamente
-(defun getvx-recursive (instance slot-name)
-  (cond
-    ((not (symbolp (first slot-name)))
-     (error "Errore: slot-names devono essere simboli"))
-    ((null (rest slot-name))
-     (getv instance (first slot-name)))
-    ((rest slot-name)
-     (getvx-recursive (getv instance (first slot-name))
-		      (rest slot-name)))))
 
-;;; Riscrivo S-expression cosi da poter usare this
-(defun rewrite-method-code (method-name method-spec)
-  (if (symbolp method-name)
-      (append
-       (list 'lambda)
-       (list(append (list 'this) (second method-spec)))
-       (list (append '(progn) (rest (rest method-spec)))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Funzione principale gestione metodi, ritorna un eval di una lambda
-(defun process-method (method-name method-spec)
-  (setf (fdefinition method-name)
-	(lambda (this &rest args)
-	  (apply (getv this method-name)
-		 (append (list this) args))))
-  (eval (rewrite-method-code method-name method-spec)))
+;;;vedere se effettivamente funzionano 
+;;;formattano i parts in una association list
+
+
+(defun formatta (input)
+  (let ((fields (first input))
+        (methods (second input)))
+    (append (format-fields fields) (format-methods methods))))
+
+(defun format-fields (fields)
+  (if (null fields)
+      nil
+    (let ((field (first fields)))
+      (cons (list (first field) (second field) (if (third field) (third field) T))
+            (format-fields (rest fields))))))
+
+(defun format-methods (methods)
+  (if (null methods)
+      nil
+    (let ((method (first methods)))
+      (cons (list (first method) (list (second method)) (list (third method)))
+            (format-methods (rest methods))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+
+
+
+
+
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;forse non servono questi extract;;; da rivedere
+
+
+;;; Funzione che estrae i fields dalle parts
+(defun extract-fields (input)
+  (let ((fields-part (assoc 'fields input)))
+    (when fields-part
+      (extract-pairs (cdr fields-part)))))
+
+;;; Funzione che estrae i methods dalle parts
+(defun extract-methods (input)
+  (let ((methods-part (assoc 'methods input)))
+    (when methods-part
+      (extract-pairs (car (cdr methods-part))))))
+
+;;; Funzione di appoggio a extract-fields/methods
+;;; che estra ogni coppia
+(defun extract-pairs (lst)
+  (cond ((null lst) nil)
+        ((listp (car lst)) (cons (car lst) (extract-pairs (cdr lst))))
+        (t (extract-pairs (cdr lst)))))
+
+
+
