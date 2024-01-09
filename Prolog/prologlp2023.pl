@@ -1,3 +1,4 @@
+
 :- dynamic
     class/3,
     instance/3,
@@ -17,11 +18,12 @@ def_class(ClassName, Parents):-
 def_class(ClassName, Parents, Parts):-
     not(class(ClassName, _, _)),
     is_list(Parents),
-    exist_parents(Parents),
+    list_to_set(Parents, ParentsSet),
+    exist_parents(ParentsSet),
     check_parts(ClassName, Parts),
-    legacy(Parents, InheritedParts),
+    legacy(ParentsSet, InheritedParts),
     ord_union(InheritedParts, Parts, AllParts),
-    assert(class(ClassName, Parents, AllParts)).
+    assert(class(ClassName, ParentsSet, AllParts)).
 
 
 % exist_parents/1
@@ -176,13 +178,13 @@ examination(InstanceName, [Part|Parts]):-
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
-    list_to_sequence(MethodAttributes, MethodAttributesSequence),
     create_method(InstanceName,
                   MethodName,
-                  MethodAttributesSequence,
+                  MethodAttributes,
                   MethodBody,
                   [],
                   NewMethodBody),
+    list_to_sequence(MethodAttributes, MethodAttributesSequence),
     Term=..[MethodName, InstanceName, MethodAttributesSequence],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).

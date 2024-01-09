@@ -1,3 +1,4 @@
+
 :- dynamic
     class/3,
     instance/3,
@@ -176,13 +177,13 @@ examination(InstanceName, [Part|Parts]):-
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
-    list_to_sequence(MethodAttributes, MethodAttributesSequence),
     create_method(InstanceName,
                   MethodName,
-                  MethodAttributesSequence,
+                  MethodAttributes,
                   MethodBody,
                   [],
                   NewMethodBody),
+    list_to_sequence(MethodAttributes, MethodAttributesSequence),
     Term=..[MethodName, InstanceName, MethodAttributesSequence],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
@@ -310,7 +311,7 @@ create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
 list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
-%list_to_sequence([], true).
+list_to_sequence([], true).
 
 
 
