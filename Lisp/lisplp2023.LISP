@@ -69,41 +69,36 @@
        (member (car part) '(fields methods))))  
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;vedere se effettivamente funzionano 
-;;;formattano i parts in una association list
 
 
+
+;;; assumo che i methods vengano sempre dopo i fields
 (defun formatta (input)
-  (let ((fields (first input))
-        (methods (second input)))
-    (append (format-fields fields) (format-methods methods))))
+  ;se ci sono sia fields che methods
+  (cond ((and (equal (first (first input)) 'fields) 
+           (equal (first (second input)) 'methods))
+    (append (format-fields (first input)) (format-methods (second input))))
+        ;se non ci sono fields
+        ((equal (first (first input)) 'methods)
+         (format-methods (first input)))
+        ;se non ci sono methods
+        ((and (equal (first (first input)) 'fields) 
+           (= (length input) 1)) 
+         (format-fields (first input)))
+    ))
+
 
 (defun format-fields (fields)
-  (if (null fields)
+  (if (= (length fields) 1)
       nil
-    (let ((field (first fields)))
-      (cons (list (first field) (second field) (if (third field) (third field) T))
-            (format-fields (rest fields))))))
+      (cons (list (first (cadr fields)) (second (cadr fields)) (if (third (cadr fields)) (third (cadr fields)) T))
+            (format-fields (rest fields)))))
 
 (defun format-methods (methods)
-  (if (null methods)
+  (if (= (length methods) 1)
       nil
-    (let ((method (first methods)))
-      (cons (list (first method) (list (second method)) (list (third method)))
-            (format-methods (rest methods))))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-
-
-
-
-
+      (cons (list (first (cadr methods)) (second (cadr methods)) (third (cadr methods)))
+            (format-methods (rest methods)))))
 
 
 
@@ -132,6 +127,4 @@
   (cond ((null lst) nil)
         ((listp (car lst)) (cons (car lst) (extract-pairs (cdr lst))))
         (t (extract-pairs (cdr lst)))))
-
-
 
