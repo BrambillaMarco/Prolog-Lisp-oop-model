@@ -14,7 +14,7 @@
      (error "Error: parent non e' una lista"))
     ((parents-control class-name parents)
      (error "Error: classe e parents con stesso nome"))
-    ((check-parts parts)
+    ((not (check-parts parts))
      (error "Error: bad values formatting")))
   (let*
       ((genitori
@@ -74,7 +74,7 @@
 
 
 ;;; assumo che i methods vengano sempre dopo i fields
-(defun formatta (&rest input)
+(defun formatta (input)
   ;se ci sono sia fields che methods
   (cond ((and (equal (first (first input)) 'fields) 
            (equal (first (second input)) 'methods))
@@ -149,6 +149,135 @@
        (list 'lambda)
        (list(append (list 'this) (first method-spec)))
        (list (append '(progn) (rest method-spec))))))
+
+
+
+;;; Primitiva getv
+(defun getv (instance slot-name)
+  (cond
+    ((or (not (symbolp slot-name))
+	 (null slot-name))
+     (error "Errore: slot-name non valido"))
+    ((not (equal 'oolinst (first instance)))
+     (error "Errore: istanza non valida")))
+  (let* ((is-in-instance
+	  (recursive-getv-instance (third instance) slot-name)))
+    (if is-in-instance
+	(second is-in-instance)
+	(let* ((is-in-tree
+		(recursive-getv-tree (list (second instance))
+				     slot-name)))
+	  (if is-in-tree
+	      (second is-in-tree)
+	      (error "Errore: valore non valido"))))))
+
+
+
+;;; Primitiva getvx, funge da trampolino
+(defun getvx (instance &rest slot-name)
+  (if (null slot-name)
+      (error "Errore: slot-name+ vuoto"))
+  (getvx-recursive instance slot-name))
+
+
+
+
+;;; Ritorna una coppia di valori di istanza
+(defun recursive-getv-instance (values slot-name)
+  (cond
+    ((equal values NIL)
+     NIL)
+    ((equal (first (first values)) slot-name)
+     (first values))
+    ((not (equal (first (first values)) slot-name))
+     (recursive-getv-instance (rest values) slot-name))))
+
+
+
+;;; Ritorna una coppia di valori di una classe in gerarchia
+(defun recursive-getv-tree (classes slot-name)
+  (let* ((is-in-level
+	  (recursive-getv-instance
+	   (second (get-class-spec (first classes)))
+	   slot-name)))
+    (cond
+      ((equal classes  NIL)
+       NIL)
+      (is-in-level
+       is-in-level)
+      ((not is-in-level)
+       (recursive-getv-tree
+	(append (first (get-class-spec (first classes)))
+		(rest classes))
+	slot-name)))))
+
+
+
+
+
+
+;;; Primitiva Make
+(defun make (class-name &rest parameters)
+  (let* ((formatted (format-parameters parameters)))
+    ;controlli sull'integrita' dell'input
+    (cond
+      ((not (symbolp class-name))
+       (error "Errore: class-name non e' un simbolo"))
+      ((parameters-control formatted)
+       (error "Error: bad input format")))
+    ;se i controlli vengono passati:
+    (if (and (get-class-spec class-name)
+	     (instance-check class-name formatted))
+	(list 'oolinst
+	      class-name
+	      (identify-method formatted nil))
+	(error "Errore: classe o parametro incompatibile"))))
+
+
+;;; Controllo valori e metodi di Make 
+(defun instance-check (class parameters)
+  (if (equal parameters NIL)
+      T
+      (let* ((class-value (getv (list 'oolinst class NIL)
+				(first(first parameters))))
+	     (instance-value (if (listp (second (first parameters)))
+				 (first (second (first parameters)))
+				 (second (first parameters)))))
+	(and
+	 (or (and (functionp class-value) (equal '=> instance-value))
+	     (and (not (functionp class-value))
+		  (not (equal '=> instance-value))))
+	 (instance-check class (rest parameters))))))
+
+
+
+
+
+
+
+;;; Funzione formattazione per lista associativa
+(defun format-parameters (slot-value)
+  (if (null slot-value)
+      nil
+      (append (list (list (first slot-value) (second slot-value)))
+	      (formatta (cdr( cdr slot-value))))))
+
+
+
+;;; Controllo che first sia simbolo in slot-value formattata
+(defun parameters-control (values)
+  (if (equal values NIL)
+      NIL
+      (or (not(symbolp (first (first values))))
+	  (values-control (rest values)))))
+
+
+
+
+;;; IMPORTANTE: LORO NELL'HASH TABLE HANNO:
+; -i fields a due argomenti (IMPLEMENTARE CONTROLLO FIELD TYPE "NUOVO")
+; -i metodi nel seguente formato (nome-metodo '(=> (parametri) (body)))
+
 
 
 

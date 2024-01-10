@@ -14,7 +14,7 @@
      (error "Error: parent non e' una lista"))
     ((parents-control class-name parents)
      (error "Error: classe e parents con stesso nome"))
-    ((check-parts parts)
+    ((not (check-parts parts))
      (error "Error: bad values formatting")))
   (let*
       ((genitori
@@ -66,47 +66,184 @@
 (defun valid-part-p (part)
   (and (listp part)
        ; Controlla se il primo elemento è 'fields o 'methods
-       (member (car part) '(fields methods))))  
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;vedere se effettivamente funzionano 
-;;;formattano i parts in una association list
-
-
-;;;(defun formatta (input)
-;  (let ((fields (first input))
- ;       (methods (second input)))
- ;   (append (format-fields fields) (format-methods methods))))
-
-;(defun format-fields (fields)
-;  (if (null fields)
-;      nil
-;    (let ((field (first fields)))
-;      (cons (list (first field) (second field) (if (third field) (third field) T))
-;            (format-fields (rest fields))))))
-
-;(defun format-methods (methods)
-;  (if (null methods)
-;      nil
-;    (let ((method (first methods)))
-;      (cons (list (first method) (list (second method)) (list (third method)))
- ;           (format-methods (rest methods))))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+       (or (equal (first part) 'fields)
+           (equal (first part) 'methods))))  
 
 
 
 
 
+;;; assumo che i methods vengano sempre dopo i fields
+(defun formatta (&rest input)
+  ;se ci sono sia fields che methods
+  (cond ((and (equal (first (first input)) 'fields) 
+           (equal (first (second input)) 'methods))
+    (append (format-fields (first input)) (format-methods (second input))))
+        ;se non ci sono fields
+        ((equal (first (first input)) 'methods)
+         (format-methods (first input)))
+        ;se non ci sono methods
+        ((and (equal (first (first input)) 'fields) 
+           (= (length input) 1)) 
+         (format-fields (first input)))
+    ))
+
+
+(defun format-fields (fields)
+  (if (= (length fields) 1)
+      nil
+      (cons (list (first (cadr fields)) (second (cadr fields)) (if (third (cadr fields)) (third (cadr fields)) T))
+            (format-fields (rest fields)))))
+
+(defun format-methods (methods)
+  (if (= (length methods) 1)
+      nil
+      (cons (list (first (cadr methods)) (list (second (cadr methods)) (third (cadr methods))))
+            (format-methods (rest methods)))))
+
+
+
+
+;;; Identifico i metodi e li tratto
+(defun identify-method (values result)
+  (cond
+    ((null values)
+     result)
+    ((and (listp (second (first values)))
+          (listp (third (first values))))
+     (identify-method
+      (rest values)
+      (append result (list (list
+                            (first (first values))
+                            (process-method
+                             (first (first values))
+                             (second (first values))))))))
+    ((not (null values))
+     (identify-method (rest values)
+		      (append result
+			      (list (first values)))))))
+    
 
 
 
 
 
 
+
+;;; Funzione principale gestione metodi, ritorna un eval di una lambda
+(defun process-method (method-name method-spec)
+  (setf (fdefinition method-name)
+	(lambda (this &rest args)
+	  (apply (getv this method-name)
+		 (append (list this) args))))
+  (eval (rewrite-method-code method-name method-spec)))
+
+
+
+
+
+;;; Riscrivo S-expression cosi da poter usare this
+(defun rewrite-method-code (method-name method-spec)
+  (if (symbolp method-name)
+      (append
+       (list 'lambda)
+       (list(append (list 'this) (first method-spec)))
+       (list (append '(progn) (rest method-spec))))))
+
+
+
+;;; Primitiva getv
+(defun getv (instance slot-name)
+  (cond
+    ((or (not (symbolp slot-name))
+	 (null slot-name))
+     (error "Errore: slot-name non valido"))
+    ((not (equal 'oolinst (first instance)))
+     (error "Errore: istanza non valida")))
+  (let* ((is-in-instance
+	  (recursive-getv-instance (third instance) slot-name)))
+    (if is-in-instance
+	(second is-in-instance)
+	(let* ((is-in-tree
+		(recursive-getv-tree (list (second instance))
+				     slot-name)))
+	  (if is-in-tree
+	      (second is-in-tree)
+	      (error "Errore: valore non valido"))))))
+
+
+
+;;; Primitiva getvx, funge da trampolino
+(defun getvx (instance &rest slot-name)
+  (if (null slot-name)
+      (error "Errore: slot-name+ vuoto"))
+  (getvx-recursive instance slot-name))
+
+
+
+
+;;; Ritorna una coppia di valori di istanza
+(defun recursive-getv-instance (values slot-name)
+  (cond
+    ((equal values NIL)
+     NIL)
+    ((equal (first (first values)) slot-name)
+     (first values))
+    ((not (equal (first (first values)) slot-name))
+     (recursive-getv-instance (rest values) slot-name))))
+
+
+
+;;; Ritorna una coppia di valori di una classe in gerarchia
+(defun recursive-getv-tree (classes slot-name)
+  (let* ((is-in-level
+	  (recursive-getv-instance
+	   (second (get-class-spec (first classes)))
+	   slot-name)))
+    (cond
+      ((equal classes  NIL)
+       NIL)
+      (is-in-level
+       is-in-level)
+      ((not is-in-level)
+       (recursive-getv-tree
+	(append (first (get-class-spec (first classes)))
+		(rest classes))
+	slot-name)))))
+
+
+
+;;; Controllo valori e metodi di New 
+(defun instance-check (class parameters)
+  (if (equal parameters NIL)
+      T
+      (let* ((class-value (getv (list 'oolinst class NIL)
+				(first(first parameters))))
+	     (instance-value (if (listp (second (first parameters)))
+				 (first (second (first parameters)))
+				 (second (first parameters)))))
+	(and
+	 (or (and (functionp class-value) (equal '=> instance-value))
+	     (and (not (functionp class-value))
+		  (not (equal '=> instance-value))))
+	 (instance-check class (rest parameters))))))
+
+
+
+;;; Primitiva New
+(defun new (class-name &rest parameters)
+  (let* ((formatted (formatta parameters)))
+    (cond
+      ((not (symbolp class-name))
+       (error "Errore: class-name non e' un simbolo"))
+      ((values-control formatted)
+       (error "Error: bad input format")))
+    (if (and (get-class-spec class-name)
+	     (instance-check class-name formatted))
+	(list 'oolinst
+	      class-name
+	      (identify-method formatted nil))
+	(error "Errore: classe o parametro incompatibile"))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -132,48 +269,4 @@
   (cond ((null lst) nil)
         ((listp (car lst)) (cons (car lst) (extract-pairs (cdr lst))))
         (t (extract-pairs (cdr lst)))))
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-;;2 PRENDE IL PRIMO ELEMENTO DELLE LISTE IL CHE è SBAGLIATO PERCHè SAREBBERO O 'fields o 'methods
-;;; assumo che i methods vengano sempre dopo i fields
-(defun formatta (&rest input)
-  ;se ci sono sia fields che methods
-  (cond ((and (equal (first (first input)) 'fields) 
-           (equal (first (second input)) 'methods))
-    (append (format-fields (first input)) (format-methods (second input))))
-        ;se non ci sono fields
-        ((equal (first (first input)) 'methods)
-         (format-methods (first input)))
-        ;se non ci sono methods
-        ((and (equal (first (first input)) 'fields) 
-           (not (equal (first (second input)) 'methods))) 
-         (format-fields (first-input)))
-    ))
-
-
-(defun format-fields (fields)
-  (if (null fields)
-      nil
-      (cons (list (first (cadr fields)) (second (cadr fields)) (if (third (cadr fields)) (third (cadr fields)) T))
-            (format-fields (rest fields)))))
-
-(defun format-methods (methods)
-  (if (null methods)
-      nil
-      (cons (list (first (cadr methods)) (second (cadr methods)) (third (cadr methods)))
-            (format-methods (rest methods)))))
-
-
-
-
-
-
-
-
-
-
 
