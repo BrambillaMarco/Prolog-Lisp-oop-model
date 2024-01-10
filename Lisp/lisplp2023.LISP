@@ -66,14 +66,15 @@
 (defun valid-part-p (part)
   (and (listp part)
        ; Controlla se il primo elemento è 'fields o 'methods
-       (member (car part) '(fields methods))))  
+       (or (equal (first part) 'fields)
+           (equal (first part) 'methods))))  
 
 
 
 
 
 ;;; assumo che i methods vengano sempre dopo i fields
-(defun formatta (input)
+(defun formatta (&rest input)
   ;se ci sono sia fields che methods
   (cond ((and (equal (first (first input)) 'fields) 
            (equal (first (second input)) 'methods))
@@ -97,8 +98,58 @@
 (defun format-methods (methods)
   (if (= (length methods) 1)
       nil
-      (cons (list (first (cadr methods)) (second (cadr methods)) (third (cadr methods)))
+      (cons (list (first (cadr methods)) (list (second (cadr methods)) (third (cadr methods))))
             (format-methods (rest methods)))))
+
+
+
+
+;;; Identifico i metodi e li tratto
+(defun identify-method (values result)
+  (cond
+    ((null values)
+     result)
+    ((and (listp (second (first values)))
+          (listp (third (first values))))
+     (identify-method
+      (rest values)
+      (append result (list (list
+                            (first (first values))
+                            (process-method
+                             (first (first values))
+                             (second (first values))))))))
+    ((not (null values))
+     (identify-method (rest values)
+		      (append result
+			      (list (first values)))))))
+    
+
+
+
+
+
+
+
+;;; Funzione principale gestione metodi, ritorna un eval di una lambda
+(defun process-method (method-name method-spec)
+  (setf (fdefinition method-name)
+	(lambda (this &rest args)
+	  (apply (getv this method-name)
+		 (append (list this) args))))
+  (eval (rewrite-method-code method-name method-spec)))
+
+
+
+
+
+;;; Riscrivo S-expression cosi da poter usare this
+(defun rewrite-method-code (method-name method-spec)
+  (if (symbolp method-name)
+      (append
+       (list 'lambda)
+       (list(append (list 'this) (first method-spec)))
+       (list (append '(progn) (rest method-spec))))))
+
 
 
 
