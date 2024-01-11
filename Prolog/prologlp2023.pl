@@ -1,4 +1,4 @@
-% Brambilla Marco mat.
+% Brambilla Marco mat. 856428
 % Colciago Federico mat. 858643
 % Condello Paolo mat. 829800
 
@@ -26,7 +26,12 @@ def_class(ClassName, Parents, Parts):-
     check_parts(ClassName, Parts),
     legacy(ParentsSet, InheritedParts),
     ord_union(InheritedParts, Parts, AllParts),
-    assert(class(ClassName, ParentsSet, AllParts)).
+    assert(class(ClassName, ParentsSet, AllParts)),
+    write("E' stata creata la classe "),
+    write(ClassName),
+    write(", i suoi genitori sono:"),
+    write(Parents),
+    write(".").
 
 % exist_parents/1
 % Verifica se esistono le classi genitori passate nella
@@ -86,7 +91,12 @@ make(InstanceName, ClassName, Fields) :-
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
     assert(instance(InstanceName, ClassName, AllFields)),
-    examination(InstanceName, ClassParts).
+    examination(InstanceName, ClassParts),
+    write("E' stata creata l'istanza "),
+    write(InstanceName),
+    write(" della classe "),
+    write(ClassName),
+    write(".").
 
 % validate_fields/2
 % Verifica se i campi dell'istanza esistono nella classe.
@@ -341,18 +351,29 @@ list_to_sequence([], true).
 % is_class/1
 % Verifica se esiste la classe ClassName.
 is_class(ClassName) :-
-    class(ClassName,_,_).
+    class(ClassName,_,_),
+    write("La classe "),
+    write(ClassName),
+    write(" esiste.").
 
 % is_instance/1
 % Verifica se esiste un'istanza Value(senza controllare la
 % classe di questa istanza).
 is_instance(Value) :-
-    instance(Value, _, _).
+    instance(Value, _, _),
+    write("La istanza "),
+    write(Value),
+    write(" esiste.").
 
 % is_instance/2
 % Verifica se esiste un'istanza di una determinata classe.
 is_instance(Value, Class) :-
-    instance(Value, Class, _).
+    instance(Value, Class, _),
+    write("La istanza "),
+    write(Value),
+    write(" della classe "),
+    write(Class),
+    write(" esiste.").
 
 % inst/2
 % Recupera un istanza dato il suo nome.
