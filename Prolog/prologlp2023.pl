@@ -25,7 +25,11 @@ def_class(ClassName, Parents, Parts):-
     exist_parents(ParentsSet),
     check_parts(ClassName, Parts),
     legacy(ParentsSet, InheritedParts),
-    ord_union(InheritedParts, Parts, AllParts),
+    check_override(InheritedParts,
+                   Parts,
+                   [],
+                   NewInheritedParts),
+    ord_union(NewInheritedParts, Parts, AllParts),
     assert(class(ClassName, ParentsSet, AllParts)),
     write("E' stata creata la classe "),
     write(ClassName),
@@ -74,6 +78,54 @@ legacy([Parent|Parents], Out) :-
     legacy(Parents, Rest),
     ord_union(ParentParts, Rest, Out).
 
+% check_override/4
+% Sovrascrive tutti i field e method che hanno lo stesso
+% nome di quelli definiti nella nuova classe.
+check_override([],
+               _,
+               List,
+               NewInheritedParts):-
+    List=NewInheritedParts.
+check_override([InheritedPart | InheritedRest],
+               Parts,
+               List,
+               NewInheritedParts):-
+    InheritedPart=field(X, _, _),
+    member(field(X, _, _), Parts),
+    check_override(InheritedRest,
+                   Parts,
+                   List,
+                   NewInheritedParts).
+check_override([InheritedPart | InheritedRest],
+               Parts,
+               List,
+               NewInheritedParts):-
+    InheritedPart=field(X, _),
+    member(field(X, _), Parts),
+    check_override(InheritedRest,
+                   Parts,
+                   List,
+                   NewInheritedParts).
+check_override([InheritedPart | InheritedRest],
+               Parts,
+               List,
+               NewInheritedParts):-
+    InheritedPart=method(X, _, _),
+    member(method(X, _, _), Parts),
+    check_override(InheritedRest,
+                   Parts,
+                   List,
+                   NewInheritedParts).
+check_override([InheritedPart | InheritedRest],
+               Parts,
+               List,
+               NewInheritedParts):-
+    append([[InheritedPart], List], NewList),
+    check_override(InheritedRest,
+                   Parts,
+                   NewList,
+                   NewInheritedParts).
+
 % make/2
 % Richiama make/3, creando così un istanza di una classe,
 % senza inserire però fields o methods.
@@ -101,12 +153,12 @@ make(InstanceName, ClassName, Fields) :-
 % validate_fields/2
 % Verifica se i campi dell'istanza esistono nella classe.
 validate_fields([], _).
-validate_fields([FieldName = Value| Rest], ClassFields) :-
-    (
-        member(field(FieldName, _), ClassFields);
-        member(field(FieldName, _, Type), ClassFields),
-        compatible_type(Value, Type)
-    ),
+validate_fields([FieldName = _| Rest], ClassFields) :-
+    member(field(FieldName, _), ClassFields),
+    validate_fields(Rest, ClassFields).
+validate_fields([FieldName = Value | Rest], ClassFields):-
+    member(field(FieldName, _, Type), ClassFields),
+    compatible_type(Value, Type),
     validate_fields(Rest, ClassFields).
 
 % compatible_type/2
@@ -219,11 +271,11 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Riga),
-    not(var(Riga)),
-    not(atom(Riga)),
-    not(string(Riga)),
-    Riga=field(this, FieldName, Value),
+    arg(1, MethodBody, Line),
+    not(var(Line)),
+    not(atom(Line)),
+    not(string(Line)),
+    Line=field(this, FieldName, Value),
     append([List,
            [field(InstanceName, FieldName, Value)]],
            NewList),
@@ -240,11 +292,11 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Riga),
-    not(var(Riga)),
-    not(atom(Riga)),
-    not(string(Riga)),
-    append([List, [Riga]], NewList),
+    arg(1, MethodBody, Line),
+    not(var(Line)),
+    not(atom(Line)),
+    not(string(Line)),
+    append([List, [Line]], NewList),
     arg(2, MethodBody, Next),
     create_method(InstanceName,
                   MethodName,
@@ -283,11 +335,11 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Riga),
-    not(var(Riga)),
-    not(atom(Riga)),
-    not(string(Riga)),
-    Riga=field(this, FieldName, Value),
+    arg(1, MethodBody, Line),
+    not(var(Line)),
+    not(atom(Line)),
+    not(string(Line)),
+    Line=field(this, FieldName, Value),
     append([List,
            [field(InstanceName, FieldName, Value)]],
            NewList),
@@ -304,11 +356,11 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Riga),
-    not(var(Riga)),
-    not(atom(Riga)),
-    not(string(Riga)),
-    append([List, [Riga]], NewList),
+    arg(1, MethodBody, Line),
+    not(var(Line)),
+    not(atom(Line)),
+    not(string(Line)),
+    append([List, [Line]], NewList),
     arg(2, MethodBody, Next),
     create_method(InstanceName,
                   MethodName,
