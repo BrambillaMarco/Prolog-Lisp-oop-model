@@ -132,9 +132,9 @@ transform_field(method(Name, _, _), method=Name).
 % Unisce i campi della make con i campi della classe, non
 % duplicandoli.
 union_fields([], List2, List2).
-union_fields([Field | Rest1], List2, Union) :-
+union_fields([Field | Rest], List2, Union) :-
     replace_value(Field, List2, UpdatedList),
-    union_fields(Rest1, UpdatedList, Union).
+    union_fields(Rest, UpdatedList, Union).
 
 % replace_value/3
 % Chiamato dalla make/3, verifica se un field della nuova
@@ -153,7 +153,8 @@ replace_value(NewField,
     replace_value(NewField, Rest, UpdatedRest).
 
 % equivalent_field/2
-% Verifica che i nomi di due field siano uguali.
+% Predicato ausiliario di replaca_value/3 che verifica che i
+% nomi di due field siano uguali.
 equivalent_field(Name=_, Name=_).
 
 % examination/2

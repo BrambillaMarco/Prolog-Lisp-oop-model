@@ -4,18 +4,20 @@ Brambilla Marco, mat. 856428
 Colciago Federico, mat. 858643
 Condello Paolo, mat. 829800
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
 
 def_class/2
 
 def_class(ClassName, Parents)
 
-Crea una classe di nome ClassName, che ha come genitori le classi contenute nella 
-lista Parents, utilizzano però il predicato def_class/3 chiamandolo in questo modo:
+Crea una classe di nome ClassName, che ha come genitori le classi contenute 
+nella lista Parents, utilizzando il predicato def_class/3 chiamandolo in questo 
+modo:
 def_class(ClassName, Parents, [])
-Dove la lista vuota indica l'assenza di fields e methods per la nuova classe da creare.
+Dove la lista vuota indica l'assenza di fields e methods per la nuova classe 
+da creare.
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
 
 def_class/3
 
@@ -23,15 +25,18 @@ def_class(ClassName, Parents, Parts)
 
 -Verifica che non esista una classe con il nome ClassName.
 -Verifica che Parents sia una lista.
--Verifica che i parents presenti nella lista Parents esistano, e non contengano
- doppioni, tramite il predicato exist_parents/1.
+-Verifica che i parents presenti nella lista Parents esistano, e non 
+ contengano doppioni, tramite il predicato exist_parents/1.
 -Verifica che la sintassi di Parts sia quella corretta, tramite il metodo
  check_parts/2.
--Eredita i field e methods delle classi genitori, tramite il predicato legacy/2.
--Crea una classe di nome ClassName, con ha come genitori le classi contenute nella
- lista Parents, e associa i field e method passati in Parts alla classe stessa.
+-Eredita i field e methods delle classi genitori, tramite il predicato 
+ legacy/2.
+-Crea una classe di nome ClassName, con ha come genitori le classi contenute 
+ nella lista Parents, e associa i field e method passati in Parts alla classe 
+ stessa.
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
+
 
 exist_parents/1
 
@@ -41,7 +46,8 @@ CHIAMATO DA def_class/3
 
 Verifica che i Parents siano delle classi esistenti.
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
+
 
 check_parts/2 e check_part/2
 
@@ -50,9 +56,10 @@ check_parts(ClassName, Parts)
 CHIAMATO DA def_class/3
 
 Verifica che le Parts passate siano nel formato corretto, chiamando durante
-l'esecuzione anche il predicato check_part/2.
+l'esecuzione anche il predicato ausiliario check_part/2.
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
+
 
 legacy/2
 
@@ -60,7 +67,215 @@ CHIAMATO DA def_class/3
 
 Eredita i field e/o i method delle classi genitore.
 
-___________________________________________________________________________________________
+_______________________________________________________________________________
 
 
+make/2
 
+make(InstanceName, ClassName)
+
+Crea una istanza della classe ClassName di nome InstanceName,utilizzando il 
+predicato make/3 chiamandolo in questo modo:
+make(InstanceName, ClassName, [])
+Dove la lista vuota indica l'assenza di fields per la nuova istanza, tenendo 
+così tutti i fields di "default" della classe dell'istanza.
+
+_______________________________________________________________________________
+
+
+make/3
+
+make(InstanceName, ClassName, Fields)
+
+-Controlla che non esista già un istanza della classe ClassName di nome 
+ InstanceName.
+-Controlla che esista la classe ClassName, e attribuisce alla variabile 
+ ClassParts le Parts della classe di cui si vuole creare l'istanza.
+-Verifica che i Fields siano coerenti con quelli della classe ClassName, 
+ tramite il predicato validate_fields/2.
+-Controlla che i type dei Fields siano corretti, tramite il predicato 
+ compatible_type/2.
+-Trasforma i field(FieldName, Value, Type) in [FieldName = Value], tramite il
+ predicato transform_fields/2.
+-Unisce i Fields alle ClassParts, togliendo i duplicati, tramite il predicato
+ union_fields/3.
+-Crea una istanza della classe ClassName, di nome IstanceName, che contiene
+ come Fields il risultato di tutti i vari predicati descritti sopra.
+-Chiama il predicato examination/2, passandogli l'istanza appena creata e le
+ sue Parts, in modo da controllare nuovamente che siano tutti nel formato
+ corretto, e nel caso che la classe ClassName abbia un metodo, allora lo
+ crea dinamicamente per la istanza appena creata.
+
+_______________________________________________________________________________
+
+validate_fields/2
+
+validate_fields([FieldName = Value | Rest], ClassFields)
+
+CHIAMATO DA make/3
+
+Verifica se i campi dell'istanza da creare esistono nella classe.
+
+_______________________________________________________________________________
+
+compatible_type/2
+
+Varie definizioni...
+
+CHIAMATO DA validate_fields/2
+
+Verifica che i Fields passati alla make/3, siano del tipo specificato nel 
+parametro Type.
+
+_______________________________________________________________________________
+
+transform_fields/2 e transform_field/2
+
+transform_fields([Field | Rest], [KeyValue | TransformedRest])
+
+CHIAMATO DA make/3
+
+Trasforma field(FieldName, Value, Type) in [FieldName = Value], chiamando
+durante l'esecuzione anche il predicato ausiliario transform_field/2.
+
+_______________________________________________________________________________
+
+union_fields/3
+
+union_fields([Field | Rest], List2, Union)
+
+CHIAMATO DA make/3
+
+Unisce i campi della make con i campi della classe, non duplicandoli.
+
+_______________________________________________________________________________
+
+replace_value/3 e equivalent_field/2
+
+replace_value(NewField, [OldField | Rest], [UpdatedField | Rest])
+
+CHIAMATO DA union_fields/3
+
+Verifica se i Fields passati alla make/3 per la creazione della nuova istanza
+esistano nella classe di riferimento, e in tal caso, sostituisce i valori di
+"default" con quelli passati alla make/3.
+Il predicato equivalent_field/2 è da considerarsi ausiliario di
+replace_value/3.
+
+_______________________________________________________________________________
+
+examination/2
+
+Varie definizioni...
+
+CHIAMATO DA make/3
+
+Analizza tutte le Parts di una istanza appena creata, e se trova un method,
+allora chiama il predicato create_method/6 che si occupa della creazione di
+un nuovo predicato a runtime per la istanza appena creata.
+
+_______________________________________________________________________________
+
+create_method/6 e create_method_finisher/6
+
+Varie definizioni...
+
+CHIAMATO DA examination/2
+-Legge la prima istruzione del corpo di un metodo, e verifica che esso non sia
+ una variabile, un atomo o una stringa(in quest'ultimo caso, l'esecuzione
+ ricorsiva di create_method/6 si ferma, perchè significa che non ci sono più
+ istruzioni da leggere, oppure c'è un errore nella stesura del codice presente
+ nel corpo di un metodo all'interno della classe).
+-Sostituisce il simbolo "this" con l'IstanceName, per rendere possibile
+ che l'utente usi "this" per indicare che un determinato field faccia
+ riferimento alla istanza stessa.
+-Controlla se ci sono altre istruzioni da analizzare(in caso contrario,
+ l'esecuzione ricorsiva di create_method/6 si ferma).
+-Arrivato alla sua ultima iterazione, chiama il predicato ausiliario
+ create_method_finisher/6 che si occupa di trasformare la lista di istruzioni
+ appena processate in una sequenza, per rendere possibile l'assert del 
+ predicato a runtime.
+
+_______________________________________________________________________________
+
+list_to_sequence/2
+
+list_to_sequence([H | T], (H, Rest))
+
+Chiamato in vari predicati, è da considerarsi un predicato "utility" in quanto
+svariate volte lungo il codice è necessario passare da una lista ad una
+sequenza.
+
+_______________________________________________________________________________
+
+is_class/1
+
+is_class(ClassName)
+
+Verifica che ClassName sia una classe esistente.
+
+_______________________________________________________________________________
+
+is_instance/1 e is_instance/2
+
+is_instance(Value)
+is_instance(Value, Class)
+
+Nel primo caso verifica che esista una determinata istanza, senza preoccuparsi
+della sua classe.
+Nel secondo caso invece, verifica che esista una determinata istanza di una 
+determinata classe.
+
+*******************************************************************************
+ATTENZIONE! 
+Sulla traccia del progetto, veniva richiesto che is_instance/2 verificasse
+l'esistenza di una determinata istanza, che appartenesse ad una classe avente
+come genitore Class.
+Tuttavia, a seguito di alcune discussioni sul forum studenti da noi lette,
+abbiamo deciso di implementarlo nel modo descritto nella documentazione, in 
+quanto ci sembrava più utile.
+Una definizione coerente al testo del progetto sarebbe tuttavia facilmente
+ottenibile, in quanto basterebbe scrivere un codice del tipo:
+
+is_instance(Value, Parent):-
+	instance(Value, Class, _),
+	class(Class, Parents, _),
+	member(Parent, Parents).
+
+*******************************************************************************
+
+_______________________________________________________________________________
+
+inst/2
+
+inst(InstanceName, Instance)
+
+Recupra un istanza dato il suo nome.
+
+_______________________________________________________________________________
+
+field/3 - PREDICATO
+
+field(InstanceName, FieldName, Result)
+
+Estrae il valore di un campo da una classe.
+
+_______________________________________________________________________________
+
+fieldx/3
+
+fieldx(InstanceName, FieldNames, Values)
+
+Estrae i valori dei fields indicati come lista in FieldNames.
+
+_______________________________________________________________________________
+
+find_field_values/3
+
+find_field_values([FieldName | Rest], Fields, [Value | RestValues])
+
+CHIAMATO DA fieldx/3
+
+Predicato ausiliario di fieldx/3.
+
+_______________________________________________________________________________
