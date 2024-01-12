@@ -271,11 +271,16 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Line),
+    arg(1, [MethodBody], Line),
+    not(is_list(Line)),
+    arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
     not(string(Line)),
-    Line=field(this, FieldName, Value),
+    %%qua mette una tonda in più ora
+    %%che se non ci fosse andrebbe tutto
+    NewLine=field(this, FieldName, Value),
+    %%problema sulla List
     append([List,
            [field(InstanceName, FieldName, Value)]],
            NewList),
@@ -292,11 +297,13 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Line),
+    arg(1, [MethodBody], Line),
+    not(is_list(Line)),
+    arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
     not(string(Line)),
-    append([List, [Line]], NewList),
+    append([List, [NewLine]], NewList),
     arg(2, MethodBody, Next),
     create_method(InstanceName,
                   MethodName,
@@ -335,11 +342,13 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Line),
+    arg(1, [MethodBody], Line),
+    not(is_list(Line)),
+    arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
     not(string(Line)),
-    Line=field(this, FieldName, Value),
+    NewLine=field(this, FieldName, Value),
     append([List,
            [field(InstanceName, FieldName, Value)]],
            NewList),
@@ -356,11 +365,13 @@ create_method(InstanceName,
               MethodBody,
               List,
               NewMethodBody):-
-    arg(1, MethodBody, Line),
+    arg(1, [MethodBody], Line),
+    not(is_list(Line)),
+    arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
     not(string(Line)),
-    append([List, [Line]], NewList),
+    append([List, [NewLine]], NewList),
     arg(2, MethodBody, Next),
     create_method(InstanceName,
                   MethodName,
@@ -399,6 +410,12 @@ list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
 list_to_sequence([], true).
+
+% is_empty/1
+% verifica se una lista è vuota
+is_empty(Lista) :-
+    length(Lista, Lunghezza),
+    Lunghezza = 0.
 
 % is_class/1
 % Verifica se esiste la classe ClassName.
@@ -456,3 +473,14 @@ find_field_values([FieldName | Rest], Fields,
                   [Value | RestValues]) :-
     memberchk(FieldName=Value, Fields),
     find_field_values(Rest, Fields, RestValues).
+
+
+
+
+
+
+
+
+
+
+
