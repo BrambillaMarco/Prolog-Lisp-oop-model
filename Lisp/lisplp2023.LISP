@@ -54,6 +54,9 @@
 	 (parents-control class-name (rest parents))))))
 
 
+; ('(fields (name "Eva Lu Ator") (university "Berkeley" string)) '(methods (talk (&optional (out *standard-output*)) (format out "My name is ~A~%My age is ~D~%" (field this 'name) (field this 'age)))))
+
+
 ;;; Funzione che ritorna true se gli elementi in parts sono al più 2
 ;;; e se la funzione "valid-parts-list-p" torna true  
 (defun check-parts (parts)
@@ -61,7 +64,9 @@
   (and (valid-parts-list-p parts) 
        (<= (length parts) 2))) 
 
-; 
+
+
+; ('(methods (talk (&optional (out *standard-output*)) (format out "My name is ~A~%My age is ~D~%" (field this 'name) (field this 'age)))))
 
 
 ;;; Funzione ricorsiva valid-parts-list-p, chiamata da check-parts,
@@ -72,21 +77,24 @@
       (and (valid-part-p (car parts))           
            (valid-parts-list-p (cdr parts)))))  
 
-
+; part= (FIELDS (NAME "Eva Lu Ator") (UNIVERSITY "Berkeley" STRING))
 ;;; Funzione valid-part-p d'appoggio chiamata da "valid-parts-list-p
 ;;; ritorna true se l'elemento passato in input è ben formattato
 (defun valid-part-p (part)
   (and (listp part)
-       ; Controlla se il primo elemento è 'fields o 'methods
        (or (equal (first part) 'fields)
-           (equal (first part) 'methods)))
-  (if (equal (first part) 'fields)
-      (check-type (cdr part)))
-  )  
+           (equal (first part) 'methods))
+       (if (equal (first part) 'fields)
+           (my-check-type (cdr part))
+           t)))
 
 
-;;; 
-(defun check-type (fields)
+;;; fields= ((UNIVERSITY "Berkeley" STRING))
+
+;field = (UNIVERSITY "Berkeley" STRING)
+;field-value = "berkeley"
+
+(defun my-check-type (fields)
   ; caso base:
   (if (null fields)
       t
@@ -95,11 +103,11 @@
            (field-value
             (second field)))
     ;se esiste il terzo elemento di un field
-    (if (third field)
-        (cond ((not (first (subtypep (type-of field-value) (third field))))
-               (error "Error: il tipo di field-value non corrisponde con field-type"))
-              (t
-               (check-type (rest fields))))))))
+      (if (and (third field) 
+               (not (subtypep (type-of field-value) (third field))))
+          (error "Error: field-value e field-type non compatibili!"))
+      (my-check-type (rest fields)))))
+        
                
     
 
@@ -128,7 +136,7 @@
   
   )
 
-(fields (name "eva") (university "berkeley" string))
+
 
 ;;; Funzione ricorsiva "format-fields" chiamata da "formatta"
 ;;; ritorna i fields ben formattati 
@@ -258,19 +266,26 @@
 
 ;;; Controllo valori e metodi di Make 
 (defun instance-check (class parameters)
-  ;caso base
   (if (equal parameters NIL)
       T
-      (let* ((class-value (field (list 'oolinst class NIL)
-				(first(first parameters))))   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	     (instance-value (if (listp (second (first parameters)))
-				 (first (second (first parameters))) 
-				 (second (first parameters)))))          
+      (let* ((part (first parameters))
+             (part-name (first part))
+             (class-value 
+              (field (list 'oolinst class NIL) part-name))   
+	     (instance-value (if (listp (second part)) 
+				 (first (second part)) 
+				 (second part))))
+      (if (and (not (functionp class-value))
+		  (not (listp instance-value))
+                  (not (check-type-match instance-value class-value)))
+          (error "Error: value ~A for field ~A is not of type ~A ." 
+                 instance-value part-name (type-of class-value))
 	(and
 	 (or (and (functionp class-value) (listp instance-value))
 	     (and (not (functionp class-value))
-		  (not (listp instance-value))))
-	 (instance-check class (rest parameters))))))
+		  (not (listp instance-value))
+                  (check-type-match instance-value class-value)))
+	 (instance-check class (rest parameters)))))))
 
 ;;; instance = ('oolinst student NIL) ;;;;; slot-name= name
 
@@ -289,11 +304,11 @@
 	  (recursive-field-instance (third instance) slot-name)))
     (if is-in-instance 
 	(second is-in-instance)
-	(let* ((is-in-tree   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		(recursive-field-tree (list (second instance)) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	(let* ((is-in-tree  
+		(recursive-field-tree (list (second instance)) 
 				     slot-name)))
-	  (if is-in-tree
-	      (second is-in-tree)
+	  (if is-in-tree   ;;; controllo per vedere se nella make dopo 'name ho messo effettivamente il suo valore
+	      (second is-in-tree)                                   
 	      (error "Errore: valore non valido"))))))
 
 
@@ -306,29 +321,12 @@
   (cond
     ((equal values NIL)
      NIL)
-    ((equal (first (first values)) slot-name)
-     (let* ((field-type
-            (third (first values))))
-       (if (check-type-match "field-value di slot-name" field-type) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;PROBLEMA: NON HO IL VALORE DI SLOT-NAME
-           (first values)
-         (error "Errore: value ~A for field ~A is not of type NUMBER", "CAPIRE COSA METTERCI")))                                        ;;;;;;FORSE SOLUZIONE: portarsi sempre field-value oltre che
-    ((not (equal (first (first values)) slot-name))                    ;;; slot-name
+    ((equal (first (first values)) slot-name) 
+     (first values))
+    ((not (equal (first (first values)) slot-name))                  
      (recursive-field-instance (rest values) slot-name))))
 
 
-
-(defun check-type-match (field-value field-type);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (cond
-   ((
-   ((numberp field-value)
-    (if (or (equal field-type 'number) (equal field-type 'Number) (equal field-type 'NUMBER))
-        t
-      (error "Errore: value ~A for field ~A is not of type NUMBER", field-value slot-name)))
-           ;;;manca supporto se field-type è true
-             ;;;;;;;;;;;;;;;;;; da finire
-         
-       ))
- 
         
 
 
@@ -345,7 +343,7 @@
 (defun recursive-field-tree (classes slot-name)
   (let* ((is-in-level
 	  (recursive-field-instance
-	   (second (get-class-spec (first classes))) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	   (second (get-class-spec (first classes))) 
 	   slot-name)))
     (cond
       ((equal classes  NIL)
@@ -358,8 +356,11 @@
 		(rest classes))
 	slot-name)))))
 
-
-
+(defun check-type-match (instance-value class-value)
+  (subtypep (type-of instance-value) class-value)
+  )
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;ATTENZIONE! AGGIUNGERE CHE SE IL FIELD-TYPE è "real" devo solo controllare che 
+;;;;;;;;;;;;;; CAMBIARE SLOT-NAME CON PART-NAME
 
 ;;; Primitiva field*, funge da trampolino
 (defun field* (instance &rest slot-name)
@@ -447,5 +448,3 @@
 
 
 ;;;; end of file -- ool.lisp
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
