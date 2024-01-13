@@ -1,3 +1,9 @@
+;;;; Brambilla Marco 856428
+;;;; Colciago Federico 858643 
+;;;; Condello Paolo 829800
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; -*- Mode: Lisp -*-
+
 ;;; Definizione e manipolazione Hash-Table
 (defparameter *classes-specs* (make-hash-table))
 (defun add-class-spec (name class-spec)
@@ -5,55 +11,61 @@
 (defun get-class-spec (name)
   (gethash name *classes-specs*))
 
-;;; Primitiva definizione classe
+
+
+;;; Funzione "def-class" ritorna class-name se crea
+;;; correttamente la classe memorizzandola nell'hash-table
 (defun def-class (class-name parents &rest parts)
-  (cond
+  (cond ; inizio vari controlli sui parametri in input
     ((not (symbolp class-name))
-     (error "Error: nome classe non e' un simbolo"))
+     (error "Error: il nome della classe non e' un simbolo"))
     ((not (listp parents))
-     (error "Error: parent non e' una lista"))
+     (error "Error: le superclassi non sono in una lista"))
     ((parents-control class-name parents)
      (error "Error: classe e parents con stesso nome"))
     ((not (check-parts parts))
-     (error "Error: bad values formatting")))
+     (error "Error: parts non ben formattati")))
   (let*
-      ((genitori
+      ((genitori ; variabile locale
 	(if (null parents)
 	    NIL
 	    (remove-duplicates parents)))
+       ;seconda variabile locale "formatted-slot"
        (formatted-slot (identify-method (formatta parts) nil)))
+    ; body della let: lavoro in memoria 
     (remhash class-name *classes-specs*)
     (add-class-spec class-name (list genitori formatted-slot)))
   class-name)
 
 
 
-;;; Funzione parents-control controlla che tutti i parents
-;;; siano simboli, che tutte i parents siano classi e che
-;;; non ci siano parents con lo stesso class-name
+;;; Funzione ricorsiva "parents-control" ritorna false se tutti i parents
+;;; sono simboli, se tutti i parents sono classi e se
+;;; non ci sono parents uguali a class-name
 (defun parents-control (class-name parents)
   (cond
     ((equal parents NIL)
      NIL)
     ((not (symbolp (first parents)))
-     (error "Errore: i parents devono essere lista di simboli"))
+     (error "Errore: i parents devono essere una lista di simboli"))
     ((not (get-class-spec (first parents)))
-     (error "Errore: classe genitore non esistente"))
+     (error "Errore: superclasse non esistente"))
     ((or (equal (first parents) class-name)
 	 (parents-control class-name (rest parents))))))
 
 
-;;; Funzione che controlla se ogni parte dell'input è una lista
-;;; che inizia con 'fields o 'methods."
+;;; Funzione che ritorna true se gli elementi in parts sono al più 2
+;;; e se la funzione "valid-parts-list-p" torna true  
 (defun check-parts (parts)
   ; Controlla se l'elenco delle parti è valido
   (and (valid-parts-list-p parts) 
-       (<= (length parts) 2))) ; controllo massimo due parti   
+       (<= (length parts) 2))) 
+
+; 
 
 
-
-;;; Verifica ricorsivamente se ogni parte nell'elenco è una 
-;;; lista valida che inizia con 'fields o 'methods."
+;;; Funzione ricorsiva valid-parts-list-p, chiamata da check-parts,
+;;; ritorna true se ogni elemento in part è corretto
 (defun valid-parts-list-p (parts)
   (if (null parts)
       t  ; Se non ci sono più parti, restituisce vero
@@ -61,19 +73,46 @@
            (valid-parts-list-p (cdr parts)))))  
 
 
-;;; Verifica se la parte è una lista che inizia 
-;;; con 'fields o 'methods."
+;;; Funzione valid-part-p d'appoggio chiamata da "valid-parts-list-p
+;;; ritorna true se l'elemento passato in input è ben formattato
 (defun valid-part-p (part)
   (and (listp part)
        ; Controlla se il primo elemento è 'fields o 'methods
        (or (equal (first part) 'fields)
-           (equal (first part) 'methods))))  
+           (equal (first part) 'methods)))
+  (if (equal (first part) 'fields)
+      (check-type (cdr part)))
+  )  
+
+
+;;; 
+(defun check-type (fields)
+  ; caso base:
+  (if (null fields)
+      t
+    (let* ((field
+            (first fields))
+           (field-value
+            (second field)))
+    ;se esiste il terzo elemento di un field
+    (if (third field)
+        (cond ((not (first (subtypep (type-of field-value) (third field))))
+               (error "Error: il tipo di field-value non corrisponde con field-type"))
+              (t
+               (check-type (rest fields))))))))
+               
+    
 
 
 
 
 
-;;; assumo che i methods vengano sempre dopo i fields
+
+
+
+
+;;; Funzione "formatta" prende in input le parts e le
+;;; ritorna sotto forma di "association list"
 (defun formatta (input)
   ;se ci sono sia fields che methods
   (cond ((and (equal (first (first input)) 'fields) 
@@ -85,30 +124,45 @@
         ;se non ci sono methods
         ((and (equal (first (first input)) 'fields) 
            (= (length input) 1)) 
-         (format-fields (first input)))
-    ))
+         (format-fields (first input))))
+  
+  )
 
+(fields (name "eva") (university "berkeley" string))
 
+;;; Funzione ricorsiva "format-fields" chiamata da "formatta"
+;;; ritorna i fields ben formattati 
 (defun format-fields (fields)
   (if (= (length fields) 1)
       nil
-      (cons (list (first (cadr fields)) (second (cadr fields)) (if (third (cadr fields)) (third (cadr fields)) T))
+      (cons (list (first (cadr fields)) (second (cadr fields)) 
+                  (if (third (cadr fields)) (third (cadr fields)) T))
             (format-fields (rest fields)))))
 
+
+;;; Funzione ricorsiva "format-methods" chiamata da "formatta"
+;;; ritorna i methods ben formattati
 (defun format-methods (methods)
   (if (= (length methods) 1)
       nil
-      (cons (list (first (cadr methods)) (list (second (cadr methods)) (third (cadr methods))))
+      (cons (list (first (cadr methods)) 
+                  (list (second (cadr methods)) (third (cadr methods))))
             (format-methods (rest methods)))))
 
 
 
 
-;;; Identifico i metodi e li tratto
+
+
+
+;;; Funzione ricorsiva "identify-method" ritorna la association list
+;;; con i metodi trattati dalla "process-method"
 (defun identify-method (values result)
   (cond
+   ; caso base
     ((null values)
      result)
+    ; condizione per verificare se è un metodo
     ((and (listp (second (first values)))
           (listp (third (first values))))
      (identify-method
@@ -118,6 +172,7 @@
                             (process-method
                              (first (first values))
                              (second (first values))))))))
+    ; condizione fields (lasciati cosi' come sono)
     ((not (null values))
      (identify-method (rest values)
 		      (append result
@@ -125,12 +180,8 @@
     
 
 
-
-
-
-
-
-;;; Funzione principale gestione metodi, ritorna un eval di una lambda
+;;; Funzione "process-method" per la gestione dei metodi, 
+;;; ritorna un eval di una lambda
 (defun process-method (method-name method-spec)
   (setf (fdefinition method-name)
 	(lambda (this &rest args)
@@ -142,16 +193,90 @@
 
 
 
-;;; Riscrivo S-expression cosi da poter usare this
+;;; Funzione "rewrite-method-code", chiamata da "process-method"
+;;; restituisce una nuova S-expression costruita con una nuova 
+;;; definizione di funzione lambda che include this come primo parametro
 (defun rewrite-method-code (method-name method-spec)
   (if (symbolp method-name)
       (append
        (list 'lambda)
-       (list(append (list 'this) (first method-spec)))
+       (list (append (list 'this) (first method-spec)))
        (list (append '(progn) (rest method-spec))))))
 
 
 
+
+;;;;;;ESEMPIO (make ’student ’name "Eduardo De Filippo" ’age 108)
+
+
+
+;formatted= ((name "eduardo") (age 108))
+
+
+
+;;; class-name = student   ;;; parameters = ('name "Eduardo" 'age 108)
+;;; Primitiva Make
+(defun make (class-name &rest parameters)
+  (let* ((formatted (format-parameters parameters)))
+    ;controlli sull'integrita' dell'input
+    (cond
+      ((not (symbolp class-name))
+       (error "Errore: class-name non e' un simbolo"))
+      ((parameters-control formatted)
+       (error "Error: bad input format")))
+    ;se i controlli vengono passati:
+    (if (and (get-class-spec class-name)
+	     (instance-check class-name formatted)) ;;; STATIC LINK
+	(list 'oolinst
+	      class-name
+	      (field-unifier formatted nil))
+	(error "Errore: classe o parametro incompatibile"))))
+
+
+
+;;; Funzione formattazione per lista associativa
+(defun format-parameters (slot-value)
+  (if (null slot-value)
+      nil
+      (append (list (list (first slot-value) (second slot-value)))
+	      (format-parameters (cdr( cdr slot-value))))))
+
+
+;;; Controllo che field-name sia simbolo in ogni elemento
+;;; dell'association list della make
+(defun parameters-control (values)
+  (if (equal values NIL)
+      NIL
+      (or (not(symbolp (first (first values))))
+	  (parameters-control (rest values)))))
+
+
+;;; class = student ;;;; parameters = ((name "eduardo") (age 108))
+
+; class-value = (field ('oolinst student NIL) name) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;; Controllo valori e metodi di Make 
+(defun instance-check (class parameters)
+  ;caso base
+  (if (equal parameters NIL)
+      T
+      (let* ((class-value (field (list 'oolinst class NIL)
+				(first(first parameters))))   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	     (instance-value (if (listp (second (first parameters)))
+				 (first (second (first parameters))) 
+				 (second (first parameters)))))          
+	(and
+	 (or (and (functionp class-value) (listp instance-value))
+	     (and (not (functionp class-value))
+		  (not (listp instance-value))))
+	 (instance-check class (rest parameters))))))
+
+;;; instance = ('oolinst student NIL) ;;;;; slot-name= name
+
+;;; is-in-istance = NIL 
+
+;;; is-in-tree = (recursive-field-tree (student) name) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Primitiva field
 (defun field (instance slot-name)
   (cond
@@ -162,14 +287,77 @@
      (error "Errore: istanza non valida")))
   (let* ((is-in-instance
 	  (recursive-field-instance (third instance) slot-name)))
-    (if is-in-instance
+    (if is-in-instance 
 	(second is-in-instance)
-	(let* ((is-in-tree
-		(recursive-field-tree (list (second instance))
+	(let* ((is-in-tree   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+		(recursive-field-tree (list (second instance)) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 				     slot-name)))
 	  (if is-in-tree
 	      (second is-in-tree)
 	      (error "Errore: valore non valido"))))))
+
+
+
+
+; values = ((NAME "Eva Lu Ator" T) (UNIVERSITY "Berkeley" STRING) (TALK #<anonymous interpreted function 40F001641C>))   ;;;; slot-name = name 
+
+;;; Ritorna una coppia di valori di istanza
+(defun recursive-field-instance (values slot-name)
+  (cond
+    ((equal values NIL)
+     NIL)
+    ((equal (first (first values)) slot-name)
+     (let* ((field-type
+            (third (first values))))
+       (if (check-type-match "field-value di slot-name" field-type) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;PROBLEMA: NON HO IL VALORE DI SLOT-NAME
+           (first values)
+         (error "Errore: value ~A for field ~A is not of type NUMBER", "CAPIRE COSA METTERCI")))                                        ;;;;;;FORSE SOLUZIONE: portarsi sempre field-value oltre che
+    ((not (equal (first (first values)) slot-name))                    ;;; slot-name
+     (recursive-field-instance (rest values) slot-name))))
+
+
+
+(defun check-type-match (field-value field-type);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (cond
+   ((
+   ((numberp field-value)
+    (if (or (equal field-type 'number) (equal field-type 'Number) (equal field-type 'NUMBER))
+        t
+      (error "Errore: value ~A for field ~A is not of type NUMBER", field-value slot-name)))
+           ;;;manca supporto se field-type è true
+             ;;;;;;;;;;;;;;;;;; da finire
+         
+       ))
+ 
+        
+
+
+
+;;; classes=(student) ;;;;; slot-name = name
+
+
+;is-in-level = (recursive-field-instance ((NAME "Eva Lu Ator" T) (UNIVERSITY "Berkeley" STRING) (TALK #<anonymous interpreted function 40F001641C>))    name )      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+;;; Ritorna una coppia di valori di una classe in gerarchia
+(defun recursive-field-tree (classes slot-name)
+  (let* ((is-in-level
+	  (recursive-field-instance
+	   (second (get-class-spec (first classes))) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	   slot-name)))
+    (cond
+      ((equal classes  NIL)
+       NIL)
+      (is-in-level
+       is-in-level)
+      ((not is-in-level)
+       (recursive-field-tree
+	(append (first (get-class-spec (first classes)))
+		(rest classes))
+	slot-name)))))
+
 
 
 
@@ -197,56 +385,12 @@
 
 
 
-;;; Ritorna una coppia di valori di istanza
-(defun recursive-field-instance (values slot-name)
-  (cond
-    ((equal values NIL)
-     NIL)
-    ((equal (first (first values)) slot-name)
-     (first values))
-    ((not (equal (first (first values)) slot-name))
-     (recursive-field-instance (rest values) slot-name))))
-
-
-;;;classes= (person) ;;; slot-name = name
-;;; Ritorna una coppia di valori di una classe in gerarchia
-(defun recursive-field-tree (classes slot-name)
-  (let* ((is-in-level
-	  (recursive-field-instance
-	   (second (get-class-spec (first classes))) 
-	   slot-name)))
-    (cond
-      ((equal classes  NIL)
-       NIL)
-      (is-in-level
-       is-in-level)
-      ((not is-in-level)
-       (recursive-field-tree
-	(append (first (get-class-spec (first classes)))
-		(rest classes))
-	slot-name)))))
 
 
 
 
 
 
-;;; Primitiva Make
-(defun make (class-name &rest parameters)
-  (let* ((formatted (format-parameters parameters)))
-    ;controlli sull'integrita' dell'input
-    (cond
-      ((not (symbolp class-name))
-       (error "Errore: class-name non e' un simbolo"))
-      ((parameters-control formatted)
-       (error "Error: bad input format")))
-    ;se i controlli vengono passati:
-    (if (and (get-class-spec class-name)
-	     (instance-check class-name formatted)) ;;; STATIC LINK
-	(list 'oolinst
-	      class-name
-	      (field-unifier formatted nil))
-	(error "Errore: classe o parametro incompatibile"))))
 
 
 
@@ -275,49 +419,33 @@
 
 
 
+;;; La funzione "is-class" restituisce vero se il class-name
+;;; è un simbolo ed esiste nella tabella hash,
+;;; altrimenti restituisce NIL.
+(defun is-class (class-name)
+  (and (symbolp class-name) 
+       (gethash class-name *classes-specs*))) ; 
 
 
 
+;;; La funzione "is-instance" ritorna true se il value in 
+;;; input è un'istanza di una classe specifica oppure se
+;;; è un'istanza di qualunque classe se class-name non è specificato  
+(defun is-instance (value &optional (class-name t))
+  
+  (cond
+    ((not (listp value)) 
+     nil) ; value non è un'istanza se non è una lista
+    ((not (equal (first value) 'oolinst)) 
+     nil) ; value non è un'istanza se il 1elemento non è 'oolinst
+    ((eq class-name t) 
+     t) ; se class-name non è specificato, qualunque istance è valida      
+    ((symbolp class-name)
+     (if (equal (second value) class-name) ; Check diretto istanza-classe
+         t
+       nil))))
 
 
+;;;; end of file -- ool.lisp
 
-;class= person ;;; parameters = ((name "Adam"))     (PROVA parameters = ((talk (("parametri") ("body))))
-;;; Controllo valori e metodi di Make 
-(defun instance-check (class parameters)
-  (if (equal parameters NIL)
-      T
-      (let* ((class-value (field (list 'oolinst class NIL)
-				(first(first parameters))))   ;;;class-value="Adam"
-	     (instance-value (if (listp (second (first parameters)))
-				 (first (second (first parameters))) 
-				 (second (first parameters)))))          ;;;;instance-value="adam"
-	(and
-	 (or (and (functionp class-value) (listp instance-value))
-	     (and (not (functionp class-value))
-		  (not (listp instance-value))))
-	 (instance-check class (rest parameters))))))
-
-
-
-
-
-
-
-;;; Funzione formattazione per lista associativa
-(defun format-parameters (slot-value)
-  (if (null slot-value)
-      nil
-      (append (list (list (first slot-value) (second slot-value)))
-	      (format-parameters (cdr( cdr slot-value)))))) ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;FORSE PROBLEMA (no formatta si format-parameters)
-
-
-
-;;; Controllo che first sia simbolo in slot-value formattata
-(defun parameters-control (values)
-  (if (equal values NIL)
-      NIL
-      (or (not(symbolp (first (first values))))
-	  (parameters-control (rest values)))))
-
-
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
