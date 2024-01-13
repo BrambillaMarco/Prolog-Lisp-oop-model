@@ -254,51 +254,76 @@ examination(InstanceName, [Part|Parts], List, MethodList):-
 % Rimuove il this dai metodi creati a runtime e lo sostiutisce
 % con il nome dell'istanza.
 remove_this(_, []).
-remove_this(InstanceName, [Clause | Clauses]):-
-    clause(Clause, MethodBody),
+remove_this(InstanceName, [Method | Rest]):-
+    clause(Method, MethodBody),
+    MethodBody=..MethodBodyList,
+    delete(MethodBodyList, ',', NewMethodBodyList),
     remove_this_helper(InstanceName,
-                       MethodBody,
+                       NewMethodBodyList,
                        [],
                        NewMethodBody),
-    retract(Clause :- MethodBody),
-    assert(Clause :- NewMethodBody),
-    remove_this(InstanceName, Clauses).
+    retract(Method :- MethodBody),
+    list_to_sequence(NewMethodBody, NewMethodBodySequence),
+    create_method(Method, NewMethodBodySequence),
+    remove_this(InstanceName,
+                Rest).
 
-% remove_this_helper/4
-% Predicato ausiliario di remove_this.
+% remove_this_helper/2
+% Predicato ausiliario di remove_this
+remove_this_helper(_, [], List, NewMethodBody):-
+    List=NewMethodBody.
 remove_this_helper(InstanceName,
-                   MethodBody,
+                   [Line | Lines],
                    List,
                    NewMethodBody):-
-    arg(1, MethodBody, Line),
     not(atom(Line)),
-    not(string(Line)),
-    not(var(Line)),
+    arg(1, Line, Check),
+    not(compound(Check)),
     Line=field(this, Value, Result),
-    append([List, [field(InstanceName, Value, Result)]], NewList),
-    arg(2, MethodBody, Queue),
+    append([List, [field(InstanceName, Value, Result)]],
+           NewList),
     remove_this_helper(InstanceName,
-                       Queue,
+                       Lines,
                        NewList,
                        NewMethodBody).
 remove_this_helper(InstanceName,
-                   MethodBody,
+                   [Line | Lines],
                    List,
                    NewMethodBody):-
-    arg(1, MethodBody, Line),
     not(atom(Line)),
-    not(string(Line)),
-    not(var(Line)),
-    append([List, [Line]], NewList),
-    arg(2, MethodBody, Queue),
+    arg(1, Line, Check),
+    not(compound(Check)),
+    append([List, [Line]],
+           NewList),
     remove_this_helper(InstanceName,
-                       Queue,
+                       Lines,
                        NewList,
                        NewMethodBody).
-remove_this_helper(_, Queue, List, NewMethodBody):-
-    append([List, [Queue]], NewList),
-    list_to_sequence(NewList, Seq),
-    NewMethodBody=Seq.
+remove_this_helper(InstanceName,
+                   [Line | _],
+                   List,
+                   NewMethodBody):-
+    not(atom(Line)),
+    compound(Line),
+    arg(1, Line, First),
+    arg(2, Line, Rest),
+    append([[First], [Rest]], Lines),
+    %arg(2, Line, Second),
+    %compound(Second),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       List,
+                       NewMethodBody).
+remove_this_helper(InstanceName,
+                   [Line | Lines],
+                   List,
+                   NewMethodBody):-
+    atom(Line),
+    append([List, [Line]], NewList),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       NewList,
+                       NewMethodBody).
 
 
 
@@ -312,11 +337,17 @@ list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
 list_to_sequence([], true).
 
-% is_empty/1
-% verifica se una lista è vuota
-is_empty(Lista) :-
-    length(Lista, Lunghezza),
-    Lunghezza = 0.
+% create_method/1
+% Predicato ausiliario di remove_this/2
+create_method(Method, MethodBody):-
+    arg(1, MethodBody, First),
+    arg(2, MethodBody, Rest),
+    atom(First),
+    Term=..[First, Rest],
+    assert(Method :- Term).
+create_method(Method, MethodBody):-
+    assert(Method :- MethodBody).
+
 
 % is_class/1
 % Verifica se esiste la classe ClassName.
