@@ -112,13 +112,6 @@
     
 
 
-
-
-
-
-
-
-
 ;;; Funzione "formatta" prende in input le parts e le
 ;;; ritorna sotto forma di "association list"
 (defun formatta (input)
@@ -271,20 +264,22 @@
       (let* ((part (first parameters))
              (part-name (first part))
              (class-value 
-              (field (list 'oolinst class NIL) part-name))   
+              (field (list 'oolinst class NIL) part-name))
+             (class-value-type
+              (get-field-type (list 'oolinst class NIL) part-name))
 	     (instance-value (if (listp (second part)) 
 				 (first (second part)) 
 				 (second part))))
       (if (and (not (functionp class-value))
 		  (not (listp instance-value))
-                  (not (check-type-match instance-value class-value)))
+                  (not (check-type-match instance-value class-value-type)))
           (error "Error: value ~A for field ~A is not of type ~A ." 
-                 instance-value part-name (type-of class-value))
+                 instance-value part-name class-value-type)
 	(and
 	 (or (and (functionp class-value) (listp instance-value))
 	     (and (not (functionp class-value))
 		  (not (listp instance-value))
-                  (check-type-match instance-value class-value)))
+                  (check-type-match instance-value class-value-type)))
 	 (instance-check class (rest parameters)))))))
 
 ;;; instance = ('oolinst student NIL) ;;;;; slot-name= name
@@ -297,9 +292,9 @@
   (cond
     ((or (not (symbolp slot-name))
 	 (null slot-name))
-     (error "Errore: slot-name non valido"))
+     (error "Error: slot-name non valido"))
     ((not (equal 'oolinst (first instance)))
-     (error "Errore: istanza non valida")))
+     (error "Error: istanza non valida")))
   (let* ((is-in-instance
 	  (recursive-field-instance (third instance) slot-name)))
     (if is-in-instance 
@@ -310,6 +305,27 @@
 	  (if is-in-tree   ;;; controllo per vedere se nella make dopo 'name ho messo effettivamente il suo valore
 	      (second is-in-tree)                                   
 	      (error "Errore: valore non valido"))))))
+
+
+;;; Funzione get-field-type
+(defun get-field-type (instance slot-name)
+  (cond
+    ((or (not (symbolp slot-name))
+	 (null slot-name))
+     (error "Error: slot-name non valido"))
+    ((not (equal 'oolinst (first instance)))
+     (error "Error: istanza non valida")))
+  (let* ((is-in-instance
+	  (recursive-field-instance (third instance) slot-name)))
+    (if is-in-instance 
+	(third is-in-instance)
+	(let* ((is-in-tree  
+		(recursive-field-tree (list (second instance)) 
+				     slot-name)))
+	  (if is-in-tree   ;;; controllo per vedere se nella make dopo 'name ho messo effettivamente il suo valore
+	      (third is-in-tree)                                   
+	      (error "Errore: valore non valido"))))))
+
 
 
 
@@ -356,8 +372,8 @@
 		(rest classes))
 	slot-name)))))
 
-(defun check-type-match (instance-value class-value)
-  (subtypep (type-of instance-value) class-value)
+(defun check-type-match (instance-value class-value-type)
+  (subtypep (type-of instance-value) class-value-type)
   )
  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;ATTENZIONE! AGGIUNGERE CHE SE IL FIELD-TYPE è "real" devo solo controllare che 
 ;;;;;;;;;;;;;; CAMBIARE SLOT-NAME CON PART-NAME
