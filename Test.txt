@@ -32,6 +32,22 @@ talk(ernesto).
 
 to_string(ernesto, S).
 
+is_class(person).
+
+is_class(pippo).
+
+is_instance(eve).
+
+is_instance(pippofranco).
+
+is_instance(eve, person).
+
+inst(eve, Instance).
+
+inst(pippofranco, Instance).
+
+fieldx(s1, [name, age], Fields).
+
 
 
 

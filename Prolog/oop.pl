@@ -6,9 +6,6 @@
     class/3,
     instance/3,
     method/3.
-:-discontiguous
-    create_method/6,
-    create_method_finisher/6.
 
 % def_class/2
 % Definisce una classe con nome e genitori, richiamando il
@@ -39,7 +36,7 @@ def_class(ClassName, Parents, Parts):-
 
 % exist_parents/1
 % Verifica se esistono le classi genitori passate nella
-% def_class.
+% def_class/3.
 exist_parents([]).
 exist_parents([Parent | Parents]):-
     class(Parent, _, _),
@@ -128,13 +125,15 @@ check_override([InheritedPart | InheritedRest],
 
 % make/2
 % Richiama make/3, creando così un istanza di una classe,
-% senza inserire però fields o methods.
+% senza inserire però fields aggiuntivi, verranno quindi
+% tenuti i fields "di default" della classe.
 make(InstanceName, ClassName):-
     make(InstanceName, ClassName, []).
 
 % make/3
-% Crea l'istanza di una classe, attribuendo fields e methods
-% all'istanza appena creata.
+% Crea l'istanza di una classe, attribuendo modificando i
+% fields "di default" e inserendo quelli nel parametro
+% Fields.
 make(InstanceName, ClassName, Fields) :-
     not(instance(InstanceName, ClassName, _)),
     class(ClassName, _, ClassParts),
@@ -143,7 +142,8 @@ make(InstanceName, ClassName, Fields) :-
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
     assert(instance(InstanceName, ClassName, AllFields)),
-    examination(InstanceName, ClassParts),
+    examination(InstanceName, ClassParts, [], MethodList),
+    remove_this(InstanceName, MethodList),
     write("E' stata creata l'istanza "),
     write(InstanceName),
     write(" della classe "),
@@ -177,7 +177,8 @@ compatible_type(Value, Type) :-
     instance(Value, _, _).
 
 % transform_fields/2
-% Trasforma i campi da field(Name, Value) a Name=Value.
+% Insieme a transform_field/1, trasforma i campi da
+% field(Name, Value) a Name=Value.
 transform_fields([], []).
 transform_fields([Field | Rest],
                  [KeyValue | TransformedRest]) :-
@@ -215,7 +216,7 @@ replace_value(NewField,
     replace_value(NewField, Rest, UpdatedRest).
 
 % equivalent_field/2
-% Predicato ausiliario di replaca_value/3 che verifica che i
+% Predicato ausiliario di replace_value/3 che verifica che i
 % nomi di due field siano uguali.
 equivalent_field(Name=_, Name=_).
 
@@ -223,183 +224,130 @@ equivalent_field(Name=_, Name=_).
 % Viene chiamato dalla make/3, dopo aver fatto l'assert della
 % istanza in questione.
 % Analizza tutte le Parts di una istanza, e quando una di
-% queste Parts è un method, allora chiama il predicato
-% create_method/6, che si occupera' di creare un nuovo metodo
+% queste Parts è un method, allora crea il metodo in questione
 % a runtime, eseguibile solamente dalla istanza appena creata
 % nella make/3.
-examination(_, []).
-examination(InstanceName, [Part|Parts]):-
+examination(_, [], List, MethodList):-
+    List=MethodList.
+examination(InstanceName, [Part|Parts], List, MethodList):-
     Part=method(MethodName, [], MethodBody),
-    create_method(InstanceName,
-                  MethodName,
-                  [],
-                  MethodBody,
-                  [],
-                  NewMethodBody),
     Term=..[MethodName, InstanceName],
-    assert(Term:-NewMethodBody),
-    examination(InstanceName, Parts).
-examination(InstanceName, [Part|Parts]):-
+    assert(Term:-MethodBody),
+    append([List, [Term]], NewList),
+    examination(InstanceName, Parts, NewList, MethodList).
+examination(InstanceName, [Part|Parts], List, MethodList):-
     Part=method(MethodName, MethodAttributes, MethodBody),
-    create_method(InstanceName,
-                  MethodName,
-                  MethodAttributes,
-                  MethodBody,
-                  [],
-                  NewMethodBody),
     list_to_sequence(MethodAttributes,
                      MethodAttributesSequence),
     Term=..[MethodName,
             InstanceName,
             MethodAttributesSequence],
-    assert(Term:-NewMethodBody),
-    examination(InstanceName, Parts).
-examination(InstanceName, [Part|Parts]):-
+    assert(Term:-MethodBody),
+    append([List, [Term]], NewList),
+    examination(InstanceName, Parts, NewList, MethodList).
+examination(InstanceName, [Part|Parts], List, MethodList):-
     Part=field(_,_),
-    examination(InstanceName, Parts).
-examination(InstanceName, [Part|Parts]):-
+    examination(InstanceName, Parts, List, MethodList).
+examination(InstanceName, [Part|Parts], List, MethodList):-
     Part=field(_,_,_),
-    examination(InstanceName, Parts).
+    examination(InstanceName, Parts, List, MethodList).
 
-% create_method/6
-% Crea i metodi della nuova istanza appena creata con make/3,
-% senza aggiungere parametri aggiuntivi (che non siano
-% l'istanza stessa).
-create_method(InstanceName,
-              MethodName,
-              [],
-              MethodBody,
-              List,
-              NewMethodBody):-
-    arg(1, [MethodBody], Line),
-    not(is_list(Line)),
-    arg(1, Line, NewLine),
-    not(var(Line)),
+% remove_this/2
+% Insieme a remove_this_helper/4, rimuove il this dai metodi
+% creati a runtime e lo sostiutisce con il nome dell'istanza,
+% quindi chiama il metodo create_method/2 che si occupa di
+% cancellare il metodo creato precdentemente a runtime, per
+% sosituirlo con quello "aggiornato" dopo la rimozione dei
+% this.
+remove_this(_, []).
+remove_this(InstanceName, [Method | Rest]):-
+    clause(Method, MethodBody),
+    MethodBody=..MethodBodyList,
+    delete(MethodBodyList, ',', NewMethodBodyList),
+    remove_this_helper(InstanceName,
+                       NewMethodBodyList,
+                       [],
+                       NewMethodBody),
+    retract(Method :- MethodBody),
+    list_to_sequence(NewMethodBody, NewMethodBodySequence),
+    create_method(Method, NewMethodBodySequence),
+    remove_this(InstanceName,
+                Rest).
+
+% remove_this_helper/4
+% Predicato ausiliario di remove_this/2.
+remove_this_helper(_, [], List, NewMethodBody):-
+    List=NewMethodBody.
+remove_this_helper(InstanceName,
+                   [Line | Lines],
+                   List,
+                   NewMethodBody):-
     not(atom(Line)),
-    not(string(Line)),
-    %%qua mette una tonda in più ora
-    %%che se non ci fosse andrebbe tutto
-    NewLine=field(this, FieldName, Value),
-    %%problema sulla List
-    append([List,
-           [field(InstanceName, FieldName, Value)]],
+    arg(1, Line, Check),
+    not(compound(Check)),
+    Line=field(this, Value, Result),
+    append([List, [field(InstanceName, Value, Result)]],
            NewList),
-    arg(2, MethodBody, Next),
-    create_method(InstanceName,
-                  MethodName,
-                  [],
-                  Next,
-                  NewList,
-                  NewMethodBody).
-create_method(InstanceName,
-              MethodName,
-              [],
-              MethodBody,
-              List,
-              NewMethodBody):-
-    arg(1, [MethodBody], Line),
-    not(is_list(Line)),
-    arg(1, Line, NewLine),
-    not(var(Line)),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       NewList,
+                       NewMethodBody).
+remove_this_helper(InstanceName,
+                   [Line | Lines],
+                   List,
+                   NewMethodBody):-
     not(atom(Line)),
-    not(string(Line)),
-    append([List, [NewLine]], NewList),
-    arg(2, MethodBody, Next),
-    create_method(InstanceName,
-                  MethodName,
-                  [],
-                  Next,
-                  NewList,
-                  NewMethodBody).
-create_method(InstanceName,
-              MethodName,
-              [],
-              MethodBody,
-              List,
-              NewMethodBody):-
-    append([List, [MethodBody]], NewList),
-    create_method_finisher(InstanceName,
-                           MethodName,
-                           [],
-                           MethodBody,
-                           NewList,
-                           NewMethodBody).
-
-% create_method_finisher/6
-% Predicato ausiliario di create_method/6, nell'eventualita'
-% che il nuovo metodo da creare non abbia parametri
-% (al di la' dell'istanza stessa).
-create_method_finisher(_, _, [], _, NewList, NewMethodBody):-
-    list_to_sequence(NewList, X),
-    X=NewMethodBody.
-
-% create_method/6
-% Crea i metodi della nuova istanza appena creata con make/3,
-% aggiungendo i parametri aggiuntivi.
-create_method(InstanceName,
-              MethodName,
-              MethodAttributes,
-              MethodBody,
-              List,
-              NewMethodBody):-
-    arg(1, [MethodBody], Line),
-    not(is_list(Line)),
-    arg(1, Line, NewLine),
-    not(var(Line)),
-    not(atom(Line)),
-    not(string(Line)),
-    NewLine=field(this, FieldName, Value),
-    append([List,
-           [field(InstanceName, FieldName, Value)]],
+    arg(1, Line, Check),
+    not(compound(Check)),
+    append([List, [Line]],
            NewList),
-    arg(2, MethodBody, Next),
-    create_method(InstanceName,
-                  MethodName,
-                  MethodAttributes,
-                  Next,
-                  NewList,
-                  NewMethodBody).
-create_method(InstanceName,
-              MethodName,
-              MethodAttributes,
-              MethodBody,
-              List,
-              NewMethodBody):-
-    arg(1, [MethodBody], Line),
-    not(is_list(Line)),
-    arg(1, Line, NewLine),
-    not(var(Line)),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       NewList,
+                       NewMethodBody).
+remove_this_helper(InstanceName,
+                   [Line | _],
+                   List,
+                   NewMethodBody):-
     not(atom(Line)),
-    not(string(Line)),
-    append([List, [NewLine]], NewList),
-    arg(2, MethodBody, Next),
-    create_method(InstanceName,
-                  MethodName,
-                  MethodAttributes,
-                  Next,
-                  NewList,
-                  NewMethodBody).
-create_method(InstanceName,
-              MethodName,
-              MethodAttributes,
-              MethodBody,
-              List,
-              NewMethodBody):-
-    append([List, [MethodBody]], NewList),
-    create_method_finisher(InstanceName,
-                           MethodName,
-                           MethodAttributes,
-                           MethodBody,
-                           NewList,
-                           NewMethodBody).
+    compound(Line),
+    arg(1, Line, First),
+    arg(2, Line, Rest),
+    append([[First], [Rest]], Lines),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       List,
+                       NewMethodBody).
+remove_this_helper(InstanceName,
+                   [Line | Lines],
+                   List,
+                   NewMethodBody):-
+    atom(Line),
+    append([List, [Line]], NewList),
+    remove_this_helper(InstanceName,
+                       Lines,
+                       NewList,
+                       NewMethodBody).
 
-% create_method_finisher/6
-% Predicato ausiliario di create_method/6, nell'eventualita'
-% che il nuovo metodo da creare abbia parametri aggiuntivi
-% (al di la' dell'istanza stessa).
-create_method_finisher(_, _, _, _, NewList, NewMethodBody):-
-    list_to_sequence(NewList, X),
-    X=NewMethodBody.
+% create_method/2
+% Predicato ausiliario di remove_this/2.
+create_method(Method, MethodBody):-
+    arg(1, MethodBody, First),
+    arg(2, MethodBody, Rest),
+    arg(1, Rest, SecondFirst),
+    arg(2, Rest, SecondRest),
+    atom(First),
+    not(First='call'),
+    Term=..[First, SecondFirst, SecondRest],
+    assert(Method :- Term).
+create_method(Method, MethodBody):-
+    arg(1, MethodBody, First),
+    arg(2, MethodBody, Rest),
+    atom(First),
+    Term=..[First, Rest],
+    assert(Method :- Term).
+create_method(Method, MethodBody):-
+    assert(Method :- MethodBody).
 
 % list_to_sequence/2
 % Trasforma una lista in una sequenza, predicato utile in più
@@ -410,12 +358,6 @@ list_to_sequence([X], X).
 list_to_sequence([H | T], (H, Rest)) :-
     list_to_sequence(T, Rest).
 list_to_sequence([], true).
-
-% is_empty/1
-% verifica se una lista è vuota
-is_empty(Lista) :-
-    length(Lista, Lunghezza),
-    Lunghezza = 0.
 
 % is_class/1
 % Verifica se esiste la classe ClassName.
@@ -459,7 +401,8 @@ field(InstanceName, FieldName, Result) :-
     Result = Value.
 
 % fieldx/3
-% Estrae i valori dei fields indicati come lista in FieldNames.
+% Insieme a find_field_values/2, estrae i valori dei
+% fields indicati come lista in FieldNames.
 fieldx(InstanceName, FieldNames, Values) :-
     var(Values),
     is_list(FieldNames),
@@ -473,14 +416,3 @@ find_field_values([FieldName | Rest], Fields,
                   [Value | RestValues]) :-
     memberchk(FieldName=Value, Fields),
     find_field_values(Rest, Fields, RestValues).
-
-
-
-
-
-
-
-
-
-
-

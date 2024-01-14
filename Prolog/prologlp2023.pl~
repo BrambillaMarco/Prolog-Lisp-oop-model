@@ -272,7 +272,7 @@ create_method(InstanceName,
               List,
               NewMethodBody):-
     arg(1, [MethodBody], Line),
-    not(is_empty(Line)),
+    not(is_list(Line)),
     arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
@@ -298,7 +298,7 @@ create_method(InstanceName,
               List,
               NewMethodBody):-
     arg(1, [MethodBody], Line),
-    not(is_empty(Line)),
+    not(is_list(Line)),
     arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
@@ -343,7 +343,7 @@ create_method(InstanceName,
               List,
               NewMethodBody):-
     arg(1, [MethodBody], Line),
-    not(is_empty(Line)),
+    not(is_list(Line)),
     arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
@@ -366,7 +366,7 @@ create_method(InstanceName,
               List,
               NewMethodBody):-
     arg(1, [MethodBody], Line),
-    not(is_empty(Line)),
+    not(is_list(Line)),
     arg(1, Line, NewLine),
     not(var(Line)),
     not(atom(Line)),
@@ -473,3 +473,14 @@ find_field_values([FieldName | Rest], Fields,
                   [Value | RestValues]) :-
     memberchk(FieldName=Value, Fields),
     find_field_values(Rest, Fields, RestValues).
+
+
+
+
+
+
+
+
+
+
+
