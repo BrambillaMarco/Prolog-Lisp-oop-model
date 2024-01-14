@@ -272,9 +272,9 @@
 				 (second part))))
       (if (and (not (functionp class-value))
 		  (not (listp instance-value))
-                  (not (check-type-match instance-value class-value)))
+                  (not (check-type-match instance-value class-value-type)))
           (error "Error: value ~A for field ~A is not of type ~A ." 
-                 instance-value part-name (type-of class-value))
+                 instance-value part-name class-value-type)
 	(and
 	 (or (and (functionp class-value) (listp instance-value))
 	     (and (not (functionp class-value))
