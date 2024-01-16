@@ -231,7 +231,9 @@
 
 
 
-;;; Controllo valori e metodi di Make 
+;;; Funzione ricorsiva "instance-check" ritorna true se i
+;;; parametri della make effettivamente esistono nella
+;;; classe specificata
 (defun instance-check (class parameters)
   (if (equal parameters NIL)
       T
@@ -260,7 +262,8 @@
 
 
 
-;;; Primitiva field
+;;; Funzione "field" ritorna il valore di un campo di una
+;;; specifica istanza di una classe.
 (defun field (instance part-name)
   (cond
    ((or (not (symbolp part-name))
@@ -277,10 +280,12 @@
                                     part-name)))
         (if is-in-tree
             (second is-in-tree)
-          (error "Errore: valore non valido"))))))
+          (error "Error: unknown field"))))))
 
 
-;;; Funzione get-field-type
+;;; Funzione "get-field-type" ritorna il tipo di un campo di 
+;;; una specifica istanza di una classe. E' praticamente uguale
+;;; alla funzione field solo che cambia il valore ritornato.
 (defun get-field-type (instance part-name)
   (cond
    ((or (not (symbolp part-name))
@@ -297,12 +302,15 @@
                                     part-name)))
         (if is-in-tree
             (third is-in-tree)
-          (error "Errore: valore non valido"))))))
+          (error "Error: unknown field"))))))
 
 
 
 
-;;; Ritorna una coppia di valori di istanza
+;;; Funzione ricorsiva "recursive-field-instance" ritorna
+;;; la lista di valori (field-name field-value field-type) tale
+;;; che abbia field-name = part-name. 
+;;; "values" è l'association list dei field di un'istanza.
 (defun recursive-field-instance (values part-name)
   (cond
    ((equal values NIL)
@@ -316,7 +324,12 @@
 
 
 
-;;; Ritorna una coppia di valori di una classe in gerarchia
+;;; Funzione ricorsiva "recursive-field-tree" ritorna
+;;; una lista di valori (field-name field-value field-type)
+;;; sfruttando ad ogni ciclo la recursive-field-instance.
+;;; Se l'occorrenza di part-name non è a quel "livello" di classe, 
+;;; richiama ricorsivamente se stessa passando come "classes" 
+;;; le superclassi.
 (defun recursive-field-tree (classes part-name)
   (let* ((is-in-level
 	  (recursive-field-instance
@@ -334,13 +347,17 @@
        part-name)))))
 
 
-
+;;; Funzione "check-type-match", chiamata nella instance-check,
+;;; ritorna true se un field-value, passato nella make,
+;;; è ""assegnabile"" al type specificato nella classe.
 (defun check-type-match (instance-value class-value-type)
   (subtypep (type-of instance-value) class-value-type))
 
 
 
-;;; Primitiva field*, funge da trampolino
+;;; Funzione "field*" ritorna un errore se part-name è null,
+;;; altrimenti funge da trampolino per la funzione
+;;; "field*-recursive".
 (defun field* (instance &rest part-name)
   (if (null part-name)
       (error "Errore: part-name+ vuoto"))
@@ -348,7 +365,7 @@
 
 
 
-;;; Effettiva getvx applicata ricorsivamente
+;;; Funzione "field*-recursive" ritorna 
 (defun field*-recursive (instance part-name)
   (cond
    ((not (symbolp (first part-name)))
@@ -356,11 +373,17 @@
    ((null (rest part-name))
     (field instance (first part-name)))
    ((rest part-name)
-    (field*-recursive (field instance (first part-name))
-		      (rest part-name)))))
+    (field*-recursive instance 
+                      (rest part-name)))))
 
 
+;;; CONTROLLARE ERRORE CHE NON è UGUALE ALLA TRACCIA
 
+;;; CONTROLLARE LA VIRGOLA CHE STAMPA NELLA ESECUZIONE DEI METODI
+
+;;; CONTROLLARE LA FIELD* 
+
+;;; SOSTITUIRE CON IS-INSTANCE E IS-CLASS TUTTI CHECK DELLE ISTANZE E CLASSI
 
 ;;; Identifico i metodi e li tratto
 (defun field-unifier (values result)
@@ -375,7 +398,7 @@
 
 
 
-;;; La funzione "is-class" ritorna true se il class-name
+;;; La funzione "is-class" ritorna true se class-name
 ;;; è un simbolo ed esiste nella tabella hash
 (defun is-class (class-name)
   (and (symbolp class-name)
