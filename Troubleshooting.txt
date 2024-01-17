@@ -1,6 +1,6 @@
 to_string non unifica
-lisp deve controllare type di tipo classe
 prolog make con variabile
+ragionare su is_istance e is-istance per quanto riguarda il discorso superclasse
 rileggere traccia
 readme.txt lisp
 REGOLA 80 COLONNE

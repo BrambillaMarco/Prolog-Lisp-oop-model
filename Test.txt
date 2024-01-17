@@ -4,7 +4,7 @@ def_class(student, [person],[field(name, "Eva Lu Ator"),field(university, "Berke
 
 make(eve, person).
 
-make(paolo, person, [student = collega]).
+WAIT - make(paolo, person, [student = collega]).
 
 make(adam, person, [name = "Adam"]).
 
@@ -23,6 +23,8 @@ field(s2, name, N).
 field(eve, address, Address).
 
 talk(s1).
+
+inst(s1, X), talk(X).
 
 talk(eve).
 
