@@ -1,8 +1,11 @@
+inst è corretto?
+fieldx forse deve restituire solamente l'ultimo field
 to_string non unifica
 prolog make con variabile
 ragionare su is_istance e is-istance per quanto riguarda il discorso superclasse
 rileggere traccia
 readme.txt lisp
+rileggere readme prolog
 REGOLA 80 COLONNE
 scrivere bene i nomi delle directory
 PER ULTIMO: riscrivere Prolog a mano per caratteri Unicode
