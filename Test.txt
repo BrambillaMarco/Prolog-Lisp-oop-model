@@ -4,6 +4,8 @@ def_class(student, [person],[field(name, "Eva Lu Ator"),field(university, "Berke
 
 make(eve, person).
 
+make(paolo, person, [student = collega]).
+
 make(adam, person, [name = "Adam"]).
 
 make(s1, student, [name = "Eduardo De Filippo", age = 108]).
@@ -47,7 +49,4 @@ inst(eve, Instance).
 inst(pippofranco, Instance).
 
 fieldx(s1, [name, age], Fields).
-
-
-
 
