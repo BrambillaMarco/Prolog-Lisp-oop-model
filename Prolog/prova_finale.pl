@@ -11,7 +11,8 @@
 % Definisce una classe con nome e genitori, richiamando il
 % metodo def_class/3.
 def_class(ClassName, Parents):-
-    def_class(ClassName, Parents, []).
+    def_class(ClassName, Parents, []),
+    !.
 
 % def_class/3
 % Definisce una classe con nome, genitori, campi e metodi.
@@ -28,6 +29,7 @@ def_class(ClassName, Parents, Parts):-
                    NewInheritedParts),
     ord_union(NewInheritedParts, Parts, AllParts),
     assert(class(ClassName, ParentsSet, AllParts)),
+    !,
     write("E' stata creata la classe "),
     write(ClassName),
     write(", i suoi genitori sono:"),
@@ -65,6 +67,8 @@ check_part(_, field(_, Value, string)) :-
 check_part(_, field(_, Value, Type)) :-
     class(Type, _, _),
     instance(Value, Type, _).
+check_part(_, field(_, null, Type)) :-
+    class(Type, _, _).
 check_part(_, method(_, _, _)).
 
 % legacy/2
@@ -128,13 +132,15 @@ check_override([InheritedPart | InheritedRest],
 % senza inserire però fields aggiuntivi, verranno quindi
 % tenuti i fields "di default" della classe.
 make(InstanceName, ClassName):-
-    make(InstanceName, ClassName, []).
+    make(InstanceName, ClassName, []),
+    !.
 
 % make/3
 % Crea l'istanza di una classe, attribuendo modificando i
 % fields "di default" e inserendo quelli nel parametro
 % Fields.
 make(InstanceName, ClassName, Fields) :-
+    not(var(InstanceName)),
     not(instance(InstanceName, ClassName, _)),
     class(ClassName, _, ClassParts),
     is_list(Fields),
@@ -142,15 +148,33 @@ make(InstanceName, ClassName, Fields) :-
     transform_fields(ClassParts, TransformedFields),
     union_fields(Fields, TransformedFields, AllFields),
     assert(instance(InstanceName, ClassName, AllFields)),
-    examination(InstanceName, ClassParts, [], MethodList),
-    %remove_this(InstanceName, MethodList, ""),
+    examination(InstanceName, ClassParts),
+    !,
     write("E' stata creata l'istanza "),
     write(InstanceName),
     write(" della classe "),
-    write(ClassName),
-    write(" con i metodi: "),
-    write(MethodList),
-    write(".").
+    write(ClassName).
+make(InstanceName, ClassName, Fields):-
+    var(InstanceName),
+    is_class(ClassName),
+    Fields = [],
+    findall(X, instance(X, ClassName, _), Instances),
+    member(Y, Instances),
+    InstanceName = Y,
+    !.
+make(InstanceName, ClassName, Fields):-
+    var(InstanceName),
+    is_class(ClassName),
+    not(Fields = []),
+    findall(X, instance(X, ClassName, Fields), Instances),
+    member(Y, Instances),
+    InstanceName = Y,
+    !.
+make(InstanceName, ClassName, Fields):-
+    var(InstanceName),
+    not(is_instance(_, ClassName)),
+    InstanceName = instance(istanza, ClassName, Fields),
+    !.
 
 % validate_fields/2
 % Verifica se i campi dell'istanza esistono nella classe.
@@ -177,6 +201,10 @@ compatible_type(Value, string) :-
 compatible_type(Value, Type) :-
     class(Type, _, _),
     instance(Value, _, _).
+compatible_type(Value, Type) :-
+    Value = null,
+    class(Type, _, _).
+
 
 % transform_fields/2
 % Insieme a transform_field/1, trasforma i campi da
@@ -229,18 +257,17 @@ equivalent_field(Name=_, Name=_).
 % queste Parts è un method, allora crea il metodo in questione
 % a runtime, eseguibile solamente dalla istanza appena creata
 % nella make/3.
-examination(_, [], List, MethodList):-
-    List=MethodList.
-examination(InstanceName, [Part|Parts], List, MethodList):-
+examination(_, []).
+examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, [], MethodBody),
-    Term=..[MethodName, InstanceName],
+    Term=..[MethodName,
+             InstanceName],
     term_to_atom(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
     term_to_atom(NewMethodBody, NewAtomBody),
     assert(Term:-NewMethodBody),
-    append([List, [Term]], NewList),
-    examination(InstanceName, Parts, NewList, MethodList).
-examination(InstanceName, [Part|Parts], List, MethodList):-
+    examination(InstanceName, Parts).
+examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, MethodAttributes, MethodBody),
     list_to_sequence(MethodAttributes,
                      MethodAttributesSequence),
@@ -251,14 +278,13 @@ examination(InstanceName, [Part|Parts], List, MethodList):-
             InstanceName,
             MethodAttributesSequence],
     assert(Term:-NewMethodBody),
-    append([List, [Term]], NewList),
-    examination(InstanceName, Parts, NewList, MethodList).
-examination(InstanceName, [Part|Parts], List, MethodList):-
+    examination(InstanceName, Parts).
+examination(InstanceName, [Part|Parts]):-
     Part=field(_,_),
-    examination(InstanceName, Parts, List, MethodList).
-examination(InstanceName, [Part|Parts], List, MethodList):-
+    examination(InstanceName, Parts).
+examination(InstanceName, [Part|Parts]):-
     Part=field(_,_,_),
-    examination(InstanceName, Parts, List, MethodList).
+    examination(InstanceName, Parts).
 
 
 
@@ -294,10 +320,7 @@ list_to_sequence([], true).
 % is_class/1
 % Verifica se esiste la classe ClassName.
 is_class(ClassName) :-
-    class(ClassName,_,_),
-    write("La classe "),
-    write(ClassName),
-    write(" esiste.").
+    class(ClassName,_,_).
 
 % is_instance/1
 % Verifica se esiste un'istanza Value(senza controllare la
@@ -306,14 +329,37 @@ is_instance(Value) :-
     instance(Value, _, _).
 
 % is_instance/2
-% Verifica se esiste un'istanza di una determinata classe.
+% Verifica se esiste un'istanza di una determinata classe
+% classe o superclasse.
 is_instance(Value, Class) :-
-    instance(Value, Class, _).
+    instance(Value, Class, _),
+    !.
+is_instance(Value, Superclass) :-
+    instance(Value, Class, _),
+    class(Class, Parents, _),
+    member(Superclass, Parents),
+    !.
+is_instance(Value, Superclass) :-
+    instance(Value, Class, _),
+    class(Class, Parents, _),
+    is_instance_helper(Parents, [], Superclass),
+    !.
+
+% is_instance_helper/2
+% Predicato ausiliario di is_instance, utile per
+% fare delle verifiche sugli "antenati" di una
+% classe.
+is_instance_helper([], POPs, Superclass):-
+    member(Superclass, POPs).
+is_instance_helper([Parent | Parents], POPs, Superclass) :-
+    class(Parent, POP, _),
+    append(POP, POPs, NewPOPs),
+    is_instance_helper(Parents, NewPOPs, Superclass).
 
 % inst/2
 % Recupera un istanza dato il suo nome.
 inst(InstanceName, Instance) :-
-    is_instance(InstanceName),
+    instance(InstanceName, _, _),
     Instance=InstanceName.
 
 % field/3
@@ -331,7 +377,11 @@ fieldx(InstanceName, FieldNames, Values) :-
     var(Values),
     is_list(FieldNames),
     instance(InstanceName, _, Fields),
-    find_field_values(FieldNames, Fields, Values).
+    find_field_values(FieldNames, Fields, ValuesList),
+    get_last_value(ValuesList, ValueList),
+    list_to_sequence(ValueList, Value),
+    Values = Value,
+    !.
 
 % find_field_values/3
 % Predicato ausiliario di fieldx/3.
@@ -340,3 +390,12 @@ find_field_values([FieldName | Rest], Fields,
                   [Value | RestValues]) :-
     memberchk(FieldName=Value, Fields),
     find_field_values(Rest, Fields, RestValues).
+
+% get_last_value/2
+% Chiamato da fieldx, restituisce l'ultima occorenza
+% del predicato find_field_values.
+get_last_value([_|Rest], Value) :-
+    not(Rest = []),
+    get_last_value(Rest, Value).
+get_last_value(Values, Value) :-
+    Values = Value.
