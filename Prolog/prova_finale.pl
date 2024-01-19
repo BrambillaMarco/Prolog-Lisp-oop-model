@@ -161,21 +161,18 @@ make(InstanceName, ClassName, Fields):-
     Fields = [],
     findall(X, instance(X, ClassName, _), Instances),
     member(Y, Instances),
-    InstanceName = Y,
-    !.
+    InstanceName = Y.
 make(InstanceName, ClassName, Fields):-
     var(InstanceName),
     is_class(ClassName),
     not(Fields = []),
     findall(X, instance(X, ClassName, Fields), Instances),
     member(Y, Instances),
-    InstanceName = Y,
-    !.
+    InstanceName = Y.
 make(InstanceName, ClassName, Fields):-
     var(InstanceName),
     not(is_instance(_, ClassName)),
-    InstanceName = instance(istanza, ClassName, Fields),
-    !.
+    InstanceName = instance(istanza, ClassName, Fields).
 
 % validate_fields/2
 % Verifica se i campi dell'istanza esistono nella classe.
@@ -335,18 +332,15 @@ is_instance(Value) :-
 % Verifica se esiste un'istanza di una determinata classe
 % classe o superclasse.
 is_instance(Value, Class) :-
-    instance(Value, Class, _),
-    !.
+    instance(Value, Class, _).
 is_instance(Value, Superclass) :-
     instance(Value, Class, _),
     class(Class, Parents, _),
-    member(Superclass, Parents),
-    !.
+    member(Superclass, Parents).
 is_instance(Value, Superclass) :-
     instance(Value, Class, _),
     class(Class, Parents, _),
-    is_instance_helper(Parents, [], Superclass),
-    !.
+    is_instance_helper(Parents, [], Superclass).
 
 % is_instance_helper/2
 % Predicato ausiliario di is_instance, utile per

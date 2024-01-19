@@ -17,6 +17,7 @@ def_class(ClassName, Parents):-
 % def_class/3
 % Definisce una classe con nome, genitori, campi e metodi.
 def_class(ClassName, Parents, Parts):-
+    not(var(ClassName)),
     not(class(ClassName, _, _)),
     is_list(Parents),
     list_to_set(Parents, ParentsSet),
@@ -160,21 +161,18 @@ make(InstanceName, ClassName, Fields):-
     Fields = [],
     findall(X, instance(X, ClassName, _), Instances),
     member(Y, Instances),
-    InstanceName = Y,
-    !.
+    InstanceName = Y.
 make(InstanceName, ClassName, Fields):-
     var(InstanceName),
     is_class(ClassName),
     not(Fields = []),
     findall(X, instance(X, ClassName, Fields), Instances),
     member(Y, Instances),
-    InstanceName = Y,
-    !.
+    InstanceName = Y.
 make(InstanceName, ClassName, Fields):-
     var(InstanceName),
     not(is_instance(_, ClassName)),
-    InstanceName = instance(istanza, ClassName, Fields),
-    !.
+    InstanceName = instance(istanza, ClassName, Fields).
 
 % validate_fields/2
 % Verifica se i campi dell'istanza esistono nella classe.
