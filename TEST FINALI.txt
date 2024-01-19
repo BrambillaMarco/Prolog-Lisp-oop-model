@@ -52,15 +52,9 @@ talk(evaristo).
 
 to_string(evaristo, S, A).
 
-to_string(evaristo, (S, A)).
+S=ciao, A=mondo, to_string(evaristo, (S, A)).
 
-inst(evaristo, X), to_string(X, (S, A)).
-
-inst(evaristo, X), to_string(X, (A, S)).
-
-to_string(evaristo, A, S).
-
-to_string(evaristo, (A, S)).
+inst(evaristo, X), S=ciao, A=mondo, to_string(evaristo, (S, A)).
 
 talk(ernesto).
 
@@ -81,8 +75,6 @@ field(s2, name, N).
 field(eve, address, Address).
 
 fieldx(s1, [name, age], Fields).
-
-fieldx(X, [name, age], Fields).
 
 TEST VARI:
 

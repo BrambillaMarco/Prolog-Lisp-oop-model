@@ -133,13 +133,26 @@ check_override([InheritedPart | InheritedRest],
 % senza inserire però fields aggiuntivi, verranno quindi
 % tenuti i fields "di default" della classe.
 make(InstanceName, ClassName):-
-    make(InstanceName, ClassName, []),
-    !.
+    make(InstanceName, ClassName, []).
 
 % make/3
 % Crea l'istanza di una classe, attribuendo modificando i
 % fields "di default" e inserendo quelli nel parametro
 % Fields.
+make(InstanceName, ClassName, Fields):-
+    var(InstanceName),
+    is_class(ClassName),
+    Fields = [],
+    findall(X, instance(X, ClassName, _), Instances),
+    member(Y, Instances),
+    InstanceName = Y.
+make(InstanceName, ClassName, Fields):-
+    var(InstanceName),
+    is_class(ClassName),
+    not(Fields = []),
+    findall(X, instance(X, ClassName, Fields), Instances),
+    member(Y, Instances),
+    InstanceName = Y.
 make(InstanceName, ClassName, Fields) :-
     not(var(InstanceName)),
     not(instance(InstanceName, ClassName, _)),
@@ -157,21 +170,8 @@ make(InstanceName, ClassName, Fields) :-
     write(ClassName).
 make(InstanceName, ClassName, Fields):-
     var(InstanceName),
-    is_class(ClassName),
-    Fields = [],
-    findall(X, instance(X, ClassName, _), Instances),
-    member(Y, Instances),
-    InstanceName = Y.
-make(InstanceName, ClassName, Fields):-
-    var(InstanceName),
-    is_class(ClassName),
-    not(Fields = []),
-    findall(X, instance(X, ClassName, Fields), Instances),
-    member(Y, Instances),
-    InstanceName = Y.
-make(InstanceName, ClassName, Fields):-
-    var(InstanceName),
     not(is_instance(_, ClassName)),
+    !,
     InstanceName = instance(istanza, ClassName, Fields).
 
 % validate_fields/2
