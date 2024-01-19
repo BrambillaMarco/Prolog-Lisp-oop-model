@@ -268,14 +268,16 @@ examination(InstanceName, [Part|Parts]):-
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
-    Part=method(MethodName, _, MethodBody),
+    Part=method(MethodName, MethodAttributes, MethodBody),
+    MethodAttributes \= [],
     term_string(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
     term_string(NewMethodBody, NewAtomBody),
     term_singletons(NewMethodBody, ListUnbounded),
+    list_to_sequence(ListUnbounded, SequenceUnbounded),
     Term=..[MethodName,
             InstanceName,
-            ListUnbounded],
+            SequenceUnbounded],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-

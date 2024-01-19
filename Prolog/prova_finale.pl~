@@ -273,7 +273,6 @@ examination(InstanceName, [Part|Parts]):-
     replace(this, InstanceName, AtomBody, NewAtomBody),
     term_string(NewMethodBody, NewAtomBody),
     term_singletons(NewMethodBody, ListUnbounded),
-    %list_to_sequence(ListUnbounded, SequenceUnbounded),
     Term=..[MethodName,
             InstanceName,
             ListUnbounded],
