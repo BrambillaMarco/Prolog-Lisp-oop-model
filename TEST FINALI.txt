@@ -68,9 +68,11 @@ field(marco, name, N).
 
 field(eve, age, A).
 
-field(s1, age, A).
+field(eve, age, 21).
 
-field(s2, name, N).
+field(s1, age, 108).
+
+field(s2, name, "Eva Lu Ator").
 
 field(eve, address, Address).
 

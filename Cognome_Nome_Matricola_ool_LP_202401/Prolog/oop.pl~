@@ -127,7 +127,7 @@ check_override([InheritedPart | InheritedParts],
 check_override([InheritedPart | InheritedParts],
                Parts, List, NewInheritedParts) :-
     InheritedPart = method(MethodName, _, _),
-    member(method(MethodName, _, _), Parts),
+    member(field(MethodName, _, _), Parts),
     check_override(InheritedParts, Parts,
                    List, NewInheritedParts).
 check_override([InheritedPart | InheritedParts],

@@ -1,9 +1,0 @@
-to_string non unifica
-readme.txt lisp
-rileggere readme prolog
-
-PER ULTIMO:
-
-REGOLA 80 COLONNE
-scrivere bene i nomi delle directory
-riscrivere Prolog a mano per caratteri Unicode
