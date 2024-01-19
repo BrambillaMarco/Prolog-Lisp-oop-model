@@ -17,6 +17,7 @@ def_class(ClassName, Parents):-
 % def_class/3
 % Definisce una classe con nome, genitori, campi e metodi.
 def_class(ClassName, Parents, Parts):-
+    not(var(ClassName)),
     not(class(ClassName, _, _)),
     is_list(Parents),
     list_to_set(Parents, ParentsSet),
