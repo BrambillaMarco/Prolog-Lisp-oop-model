@@ -262,21 +262,20 @@ examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, [], MethodBody),
     Term=..[MethodName,
              InstanceName],
-    term_to_atom(MethodBody, AtomBody),
+    term_string(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
-    term_to_atom(NewMethodBody, NewAtomBody),
+    term_string(NewMethodBody, NewAtomBody),
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
-    Part=method(MethodName, MethodAttributes, MethodBody),
-    list_to_sequence(MethodAttributes,
-                     MethodAttributesSequence),
-    term_to_atom(MethodBody, AtomBody),
+    Part=method(MethodName, _, MethodBody),
+    term_string(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
-    term_to_atom(NewMethodBody, NewAtomBody),
+    term_string(NewMethodBody, NewAtomBody),
+    term_singletons(NewMethodBody, ListUnbounded),
     Term=..[MethodName,
             InstanceName,
-            MethodAttributesSequence],
+            ListUnbounded],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
@@ -292,18 +291,19 @@ examination(InstanceName, [Part|Parts]):-
 replace(_, _, "", "").
 
 % Se la sottostringa corrente è quella da sostituire, sostituiscila con la nuova sottostringa
-replace(Old, New, StringaOriginale, StringaModificata) :-
+replace(Old, New, StringaOriginale,StringaModificata) :-
     sub_string(StringaOriginale, Before, _, After, Old),
     sub_string(StringaOriginale, 0, Before, _, Prefisso),
     sub_string(StringaOriginale, _, After, 0, Suffisso),
     string_concat(Prefisso, New, Temp),
     string_concat(Temp, Suffisso, TempStringaModificata),
-    replace(Old, New, TempStringaModificata, StringaModificata).
-
+    replace(Old, New, TempStringaModificata,StringaModificata).
 % Se la sottostringa corrente non è quella da sostituire, mantienila invariata
-replace(Old, _, StringaOriginale, StringaModificata) :-
+replace(Old, _, StringaOriginale,StringaModificata) :-
     not(sub_string(StringaOriginale, _, _, _, Old)),
     StringaModificata = StringaOriginale.
+
+
 
 
 

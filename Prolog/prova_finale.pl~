@@ -262,21 +262,21 @@ examination(InstanceName, [Part|Parts]):-
     Part=method(MethodName, [], MethodBody),
     Term=..[MethodName,
              InstanceName],
-    term_to_atom(MethodBody, AtomBody),
+    term_string(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
-    term_to_atom(NewMethodBody, NewAtomBody),
+    term_string(NewMethodBody, NewAtomBody),
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
-    Part=method(MethodName, MethodAttributes, MethodBody),
-    list_to_sequence(MethodAttributes,
-                     MethodAttributesSequence),
-    term_to_atom(MethodBody, AtomBody),
+    Part=method(MethodName, _, MethodBody),
+    term_string(MethodBody, AtomBody),
     replace(this, InstanceName, AtomBody, NewAtomBody),
-    term_to_atom(NewMethodBody, NewAtomBody),
+    term_string(NewMethodBody, NewAtomBody),
+    term_singletons(NewMethodBody, ListUnbounded),
+    %list_to_sequence(ListUnbounded, SequenceUnbounded),
     Term=..[MethodName,
             InstanceName,
-            MethodAttributesSequence],
+            ListUnbounded],
     assert(Term:-NewMethodBody),
     examination(InstanceName, Parts).
 examination(InstanceName, [Part|Parts]):-
@@ -292,18 +292,19 @@ examination(InstanceName, [Part|Parts]):-
 replace(_, _, "", "").
 
 % Se la sottostringa corrente è quella da sostituire, sostituiscila con la nuova sottostringa
-replace(Old, New, StringaOriginale, StringaModificata) :-
+replace(Old, New, StringaOriginale,StringaModificata) :-
     sub_string(StringaOriginale, Before, _, After, Old),
     sub_string(StringaOriginale, 0, Before, _, Prefisso),
     sub_string(StringaOriginale, _, After, 0, Suffisso),
     string_concat(Prefisso, New, Temp),
     string_concat(Temp, Suffisso, TempStringaModificata),
-    replace(Old, New, TempStringaModificata, StringaModificata).
-
+    replace(Old, New, TempStringaModificata,StringaModificata).
 % Se la sottostringa corrente non è quella da sostituire, mantienila invariata
-replace(Old, _, StringaOriginale, StringaModificata) :-
+replace(Old, _, StringaOriginale,StringaModificata) :-
     not(sub_string(StringaOriginale, _, _, _, Old)),
     StringaModificata = StringaOriginale.
+
+
 
 
 
@@ -332,15 +333,18 @@ is_instance(Value) :-
 % Verifica se esiste un'istanza di una determinata classe
 % classe o superclasse.
 is_instance(Value, Class) :-
-    instance(Value, Class, _).
+    instance(Value, Class, _),
+    !.
 is_instance(Value, Superclass) :-
     instance(Value, Class, _),
     class(Class, Parents, _),
-    member(Superclass, Parents).
+    member(Superclass, Parents),
+    !.
 is_instance(Value, Superclass) :-
     instance(Value, Class, _),
     class(Class, Parents, _),
-    is_instance_helper(Parents, [], Superclass).
+    is_instance_helper(Parents, [], Superclass),
+    !.
 
 % is_instance_helper/2
 % Predicato ausiliario di is_instance, utile per
