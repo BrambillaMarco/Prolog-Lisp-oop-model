@@ -41,8 +41,8 @@
 
 
 
-;;; Funzione ricorsiva "parents-control" ritorna false se tutti i parents
-;;; sono simboli, se tutti i parents sono classi e se
+;;; Funzione ricorsiva "parents-control" ritorna false se tutti i 
+;;; parents sono simboli, se tutti i parents sono classi e se
 ;;; non ci sono parents uguali a class-name.
 (defun parents-control (class-name parents)
   (cond
@@ -50,14 +50,14 @@
     NIL)
    ((not (symbolp (first parents)))
     (error "Errore: le superclassi devono essere una lista di simboli"))
-   ((not (get-class-spec (first parents)))
+   ((not (is-class (first parents)))
     (error "Errore: superclasse non esistente"))
    ((or (equal (first parents) class-name)
         (parents-control class-name (rest parents))))))
 
 
 ;;; Funzione "check-parts" ritorna true se gli elementi in parts
-;;; sono al più 2 e se la funzione "valid-parts-list-p" torna true.
+;;; sono al piu' 2 e se la funzione "valid-parts-list-p" torna true.
 (defun check-parts (parts)
   (and (valid-parts-list-p parts)
        (<= (length parts) 2)))
@@ -65,17 +65,17 @@
 
 
 ;;; Funzione ricorsiva "valid-parts-list-p", chiamata da "check-parts",
-;;; ritorna true se ogni elemento in part è corretto.
+;;; ritorna true se ogni elemento in part e' corretto.
 (defun valid-parts-list-p (parts)
   (if (null parts)
-      t  ; Se non ci sono più parti, restituisce vero
+      t  ; Se non ci sono piu' parti, restituisce vero
     (and (valid-part-p (car parts))
          (valid-parts-list-p (cdr parts)))))
 
 
 
 ;;; Funzione "valid-part-p", chiamata da "valid-parts-list-p",
-;;; ritorna true se l'elemento passato in input è ben formattato.
+;;; ritorna true se l'elemento passato in input e' ben formattato.
 (defun valid-part-p (part)
   (and (listp part)
        (or (equal (first part) 'fields)
@@ -95,9 +95,15 @@
             (first fields))
            (field-value
             (second field)))
-      (if (and (third field)
-               (not (subtypep (type-of field-value) (third field))))
-          (error "Error: field-value e field-type non compatibili"))
+      (cond ((and (third field)
+                  (is-class (third field)))
+             (if (equal field-value 'nil)
+                 t
+               (and (is-instance field-value (third field))
+                    (equal (second field-value) (third field)))))
+            ((and (third field)
+                  (not (subtypep (type-of field-value) (third field))))
+             (error "Error: field-value e field-type non compatibili")))
       (my-check-type (rest fields)))))
 
 
@@ -150,7 +156,7 @@
   (cond
    ((null values)
     result)
-    ; condizione per verificare se è un metodo
+    ; condizione per verificare se e' un metodo
    ((and (listp (second (first values)))
          (listp (third (first values))))
     (identify-method
@@ -203,11 +209,11 @@
       (error "Errore: class-name non e' un simbolo"))
      ((parameters-control formatted)
       (error "Error: bad input format")))
-    (if (and (get-class-spec class-name)
+    (if (and (is-class class-name)
 	     (instance-check class-name formatted))
 	(list 'oolinst
 	      class-name
-	      (field-unifier formatted nil))
+	      formatted)
       (error "Error: classe o field non compatibile"))))
 
 
@@ -222,7 +228,7 @@
 
 
 ;;; Funzione ricorsiva "parameters-control" ritorna true se
-;;; ogni field-name passato nella make è un simbolo
+;;; ogni field-name passato nella make e' un simbolo
 (defun parameters-control (values)
   (if (equal values NIL)
       NIL
@@ -232,49 +238,57 @@
 
 
 ;;; Funzione ricorsiva "instance-check" ritorna true se i
-;;; parametri della make effettivamente esistono nella
-;;; classe specificata
+;;; parametri della make sono corretti e se effettivamente
+;;; esistono nella classe specificata
 (defun instance-check (class parameters)
   (if (equal parameters NIL)
       T
     (let* ((part (first parameters))
            (part-name (first part))
+           ; utilizzo la funzione "field" con un'istanza fittizia
            (class-value
             (field (list 'oolinst class NIL) part-name))
            (class-value-type
             (get-field-type (list 'oolinst class NIL) part-name))
            (instance-value
-            (if (listp (second part))
+            (if (and (listp (second part))
+                     (not (is-instance (second part))))
                 (first (second part))
               (second part))))
+      ; check parametro
       (if (and (not (functionp class-value))
-               (not (listp instance-value))
-               (not (check-type-match instance-value class-value-type)))
-          (error "Error: value ~A for field ~A is not of type ~A ."
-                 instance-value part-name class-value-type)
+               (not (if (is-instance instance-value)
+                        t   ;se e' un'istanza ok altrimenti errore
+                      (not (listp instance-value))))
+               (not (check-type-match 
+                     instance-value class-value-type part-name)))
+          (error "Error: parametro make non valido")
 	(and
 	 (or (and (functionp class-value) (listp instance-value))
 	     (and (not (functionp class-value))
-		  (not (listp instance-value))
-                  (check-type-match instance-value class-value-type)))
+		  (if (is-instance instance-value)
+                      t
+                    (not (listp instance-value)))
+                  (check-type-match 
+                   instance-value class-value-type part-name)))
 	 (instance-check class (rest parameters)))))))
 
 
-
-
-;;; Funzione "field" ritorna il valore di un campo di una
+;;; Funzione "field" ritorna il valore di part-name di una
 ;;; specifica istanza di una classe.
 (defun field (instance part-name)
   (cond
    ((or (not (symbolp part-name))
         (null part-name))
     (error "Error: part-name non valido"))
-   ((not (equal 'oolinst (first instance)))
+   ((not (is-instance instance))
     (error "Error: istanza non valida")))
   (let* ((is-in-instance
 	  (recursive-field-instance (third instance) part-name)))
+    ; se field e' nell'istanza
     (if is-in-instance
-	(second is-in-instance)
+        (second is-in-instance)
+      ; se field non e' nell'istanza
       (let* ((is-in-tree
               (recursive-field-tree (list (second instance))
                                     part-name)))
@@ -283,7 +297,7 @@
           (error "Error: unknown field"))))))
 
 
-;;; Funzione "get-field-type" ritorna il tipo di un campo di 
+;;; Funzione "get-field-type" ritorna il tipo di un campo di
 ;;; una specifica istanza di una classe. E' praticamente uguale
 ;;; alla funzione field solo che cambia il valore ritornato.
 (defun get-field-type (instance part-name)
@@ -291,7 +305,7 @@
    ((or (not (symbolp part-name))
         (null part-name))
     (error "Error: part-name non valido"))
-   ((not (equal 'oolinst (first instance)))
+   ((not (is-instance instance))
     (error "Error: istanza non valida")))
   (let* ((is-in-instance
 	  (recursive-field-instance (third instance) part-name)))
@@ -308,14 +322,14 @@
 
 
 ;;; Funzione ricorsiva "recursive-field-instance" ritorna
-;;; la lista di valori (field-name field-value field-type) tale
-;;; che abbia field-name = part-name. 
-;;; "values" è l'association list dei field di un'istanza.
+;;; la lista di valori (field-name field-value field-type) che
+;;; ha field-name = part-name.
+;;; "values" e' l'association list dei field di un'istanza.
 (defun recursive-field-instance (values part-name)
   (cond
    ((equal values NIL)
     NIL)
-   ((equal (first (first values)) part-name) 
+   ((equal (first (first values)) part-name)
     (first values))
    ((not (equal (first (first values)) part-name))
     (recursive-field-instance (rest values) part-name))))
@@ -327,8 +341,8 @@
 ;;; Funzione ricorsiva "recursive-field-tree" ritorna
 ;;; una lista di valori (field-name field-value field-type)
 ;;; sfruttando ad ogni ciclo la recursive-field-instance.
-;;; Se l'occorrenza di part-name non è a quel "livello" di classe, 
-;;; richiama ricorsivamente se stessa passando come "classes" 
+;;; Se l'occorrenza di part-name non e' a quel "livello" di classe,
+;;; richiama ricorsivamente se stessa passando come "classes"
 ;;; le superclassi.
 (defun recursive-field-tree (classes part-name)
   (let* ((is-in-level
@@ -347,68 +361,69 @@
        part-name)))))
 
 
+
 ;;; Funzione "check-type-match", chiamata nella instance-check,
 ;;; ritorna true se un field-value, passato nella make,
-;;; è ""assegnabile"" al type specificato nella classe.
-(defun check-type-match (instance-value class-value-type)
-  (subtypep (type-of instance-value) class-value-type))
+;;; e' ""assegnabile"" al type specificato nella classe.
+;;; Il parametro part-name c'e' solo per una questione 
+;;; di debugging.
+(defun check-type-match (instance-value class-value-type part-name)
+  ; l'istanza deve essere della stessa classe specificata nel tipo
+  (cond ((and (is-class class-value-type)
+              (equal (second instance-value) class-value-type)
+              (is-instance instance-value class-value-type))
+         t)
+        ((not (subtypep (type-of instance-value) class-value-type))
+         (error "Error: value ~A for field ~A is not of type ~A ."
+                instance-value part-name class-value-type))
+        (t     ; in tutti gli altri casi torna true
+         t)))
 
 
 
-;;; Funzione "field*" ritorna un errore se part-name è null,
+
+;;; Funzione "field*" ritorna un errore se part-name e' null,
 ;;; altrimenti funge da trampolino per la funzione
 ;;; "field*-recursive".
-(defun field* (instance &rest part-name)
-  (if (null part-name)
-      (error "Errore: part-name+ vuoto"))
-  (field*-recursive instance part-name))
+(defun field* (instance &rest field-name)
+  (if (null field-name)
+      (error "Error: field-name+ vuoto")
+    (field*-recursive instance field-name)))
 
 
 
-;;; Funzione "field*-recursive" ritorna 
-(defun field*-recursive (instance part-name)
+;;; Funzione "field*-recursive" ritorna il valore associato
+;;; all'ultimo elemento di field-name nell'istanza.
+;;; Controlla che i tutti i field in "field-name" esistano.
+(defun field*-recursive (instance field-name)
   (cond
-   ((not (symbolp (first part-name)))
-    (error "Errore: part-names devono essere simboli"))
-   ((null (rest part-name))
-    (field instance (first part-name)))
-   ((rest part-name)
-    (field*-recursive instance 
-                      (rest part-name)))))
+   ((not (symbolp (first field-name)))
+    (error "Error: part-names devono essere simboli"))
+   ((null (rest field-name))
+    (field instance (first field-name)))
+   ; controllo che i field esistano in instance
+   ((and (rest field-name)
+         (field instance (first field-name)))
+    (field*-recursive instance (rest field-name)))))
 
-
-;;; CONTROLLARE ERRORE CHE NON è UGUALE ALLA TRACCIA
-
-;;; CONTROLLARE LA VIRGOLA CHE STAMPA NELLA ESECUZIONE DEI METODI
-
-;;; CONTROLLARE LA FIELD* 
-
-;;; SOSTITUIRE CON IS-INSTANCE E IS-CLASS TUTTI CHECK DELLE ISTANZE E CLASSI
-
-;;; Identifico i metodi e li tratto
-(defun field-unifier (values result)
-  (cond
-   ((null values)
-    result)
-   ((not (null values))
-    (field-unifier (rest values)
-                   (append result
-                           (list (first values)))))))
 
 
 
 
 ;;; La funzione "is-class" ritorna true se class-name
-;;; è un simbolo ed esiste nella tabella hash
+;;; e' un simbolo ed esiste nella tabella hash
 (defun is-class (class-name)
-  (and (symbolp class-name)
-       (gethash class-name *classes-specs*)))
+  (if (and (symbolp class-name)
+           (gethash class-name *classes-specs*))
+      t
+    nil))
 
 
 
 ;;; La funzione "is-instance" ritorna true se il value in
-;;; input è un'istanza di una classe specifica oppure se
-;;; è un'istanza di qualunque classe se class-name non è specificato
+;;; input e' un'istanza di una classe specifica oppure se
+;;; e' un'istanza di qualunque classe se class-name non
+;;; e' specificato
 (defun is-instance (value &optional (class-name t))
   (cond
    ((not (listp value))
@@ -416,11 +431,36 @@
    ((not (equal (first value) 'oolinst))
     nil)
    ((eq class-name t)
-    t) ; se class-name non è specificato, qualunque istance è valida
+    t) ; se class non e' specificato, qualunque instance e' valida
    ((symbolp class-name)
-    (if (equal (second value) class-name)
+    (if (or (equal (second value) class-name)
+            (is-subclass (second value)  class-name))
         t
       nil))))
+
+
+
+;;; Funzione "is-subclass" ritorna true se subclass
+;;; e' una sottoclasse di superclass.
+(defun is-subclass (subclass superclass)
+  (cond
+   ((not (is-class subclass))
+    (error "Errore: subclass non e' una classe valida"))
+   ((not (is-class superclass))
+    (error "Errore: superclass non e' una classe valida"))
+   (t
+    (is-subclass-helper subclass superclass))))
+
+
+
+;;; Funzione ausiliaria "is-subclass-helper" utilizzata 
+;;; da "is-subclass".
+(defun is-subclass-helper (subclass superclass)
+  (let ((parents (first (get-class-spec subclass))))
+    (or (member superclass parents)
+        (some 
+         (lambda (parent) (is-subclass-helper parent superclass))
+         parents))))
 
 
 ;;;; end of file -- ool.lisp
