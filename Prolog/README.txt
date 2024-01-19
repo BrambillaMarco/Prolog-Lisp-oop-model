@@ -103,6 +103,16 @@ make/3
 
 make(InstanceName, ClassName, Fields)
 
+SE InstanceName E' UNA VARIABILE E ClassName E' UNA CLASSE ESISTENTE:
+
+InstanceName unifica con tutte le instanze di ClassName
+
+SE InstanceName E' UNA VARIABILE E ClassName NON E' UNA CLASSE ESISTENTE:
+
+InstanceName unifica con un istanza fittizia di cui non viene fatto l'assert
+
+SE InstanceName E' UN SIMBOLO:
+
 -Controlla che non esista già un istanza della classe ClassName di nome 
  InstanceName.
 -Controlla che esista la classe ClassName, e attribuisce alla variabile 
@@ -115,7 +125,7 @@ make(InstanceName, ClassName, Fields)
  union_fields/3.
 -Crea una istanza della classe ClassName, di nome IstanceName, che contiene
  come Fields il risultato di tutti i vari predicati descritti sopra.
--Chiama il predicato examination/4, passandogli l'istanza appena creata,
+-Chiama il predicato examination/2, passandogli l'istanza appena creata,
  le sue Parts, una lista nuova e la variabile MethodList in modo da 
  controllare nuovamente che siano tutti nel formato corretto, e nel caso che
  la classe ClassName abbia un metodo, allora lo crea dinamicamente per la 
@@ -179,9 +189,9 @@ replace_value/3.
 
 _______________________________________________________________________________
 
-examination/4
+examination/2
 
-examination(InstanceName, [Part | Parts], List, MethodList)
+examination(InstanceName, [Part | Parts])
 
 CHIAMATO DA make/3
 
@@ -190,57 +200,15 @@ allora chiama lo crea dinamicamente per la istanza appena creata.
 
 _______________________________________________________________________________
 
-remove_this/2, remove_this_helper/4 e create_method/2
+replace/4
 
-remove_this(InstanceName, [Method | Rest])
-remove_this_helper(InstanceName, [Line | Lines], List, NewMethodBody)
-create_method(Method, MethodBody)
+replace(Old, New, OldString, NewString)
 
-CHIAMATO DA make/3
+CHIAMATO DA examination/2
 
-Inizialmente i remove_this/2 e remove_this_helper/4 prendono in ingresso tutti 
-i metodi (e i rispettivi corpi dei metodi) della istanza appena creata, per 
-poter sostituire l'atomo "this" con il nome dell'istanza stessa.
-In questo modo, i metodi funzioneranno solamente se vengono chiamati con la
-istanza come attributo, impedendo così che un istanza che non abbia quel
-metodo possa comunque eseguirlo.
-
-Tuttavia, durante l'esecuzione di remove_this/2 e remove_this_helper/4 i 
-vecchi metodi creati a runtime in precedenza (che contenevano ancora
-l'atomo "this") vengono cancellati, e quindi andranno creati a runtime dei 
-nuovi metodi, con al posto dell'atomo "this" il nome dell'istanza stessa.
-
-Per questo procedimento abbiamo utilizzato create_method/2, che crea
-dinamicamente i nuovi metodi ottenuti con remove_this/2 e 
-remove_this_helper/4, ma create_method/2, non si limita a questo.
-
-*******************************************************************************
-ATTENZIONE!
-
-Analizzando i test del progetto, ci siamo accorti che nel corpo di un metodo 
-era possibile inserire dei predicati del calibro di "with_output_to" o 
-"call", predicati che solitamente vengono inseriti "all'inizio" del corpo di 
-un metodo.
-
-Per consentire il corretto funzionamento del codice, nel caso venga inserito
-uno di questi predicati, abbiamo inserito varie definizioni del predicato
-create_method/2. 
-
-Il codice quindi può interpretare dei corpi del metodo che siano tra:
-
--Sequenze di istruzioni Prolog
--Una regola con un unico attributo (ovvero tutto il corpo del metodo vero e 
- proprio) che può essere del tipo "call/1", "ignore/1", e simili
--Una regola con due attributi, come nel caso di "with_output_to/2" dove il
- secondo attributo deve contenere il corpo del metodo vero e proprio.
-
-Il codice invece, NON può interpretare
-
--Sequenze di "istruzioni" che però non rispettino la sintassi di Prolog.
--Corpi del metodo che contengano dei predicati come "call" o
- "with_output_to/2", oltre alla seconda riga del corpo del metodo.
-
-*******************************************************************************
+Sostituisce tutte le ricorrenze di Old in OldString con New, ed unifica il 
+risultato con NewString.
+Viene utilizzato per sostituire l'atomo "this" con InstanceName.
 
 _______________________________________________________________________________
 
@@ -259,6 +227,8 @@ is_class/1
 is_class(ClassName)
 
 Verifica che ClassName sia una classe esistente.
+Se invece ClassName è una variabile allora unifica con tutte le classi create
+finora a runtime.
 
 _______________________________________________________________________________
 
@@ -269,27 +239,9 @@ is_instance(Value, Class)
 
 Nel primo caso verifica che esista una determinata istanza, senza preoccuparsi
 della sua classe.
-Nel secondo caso invece, verifica che esista una determinata istanza di una 
-determinata classe.
-
-*******************************************************************************
-ATTENZIONE!
- 
-Sulla traccia del progetto, veniva richiesto che is_instance/2 verificasse
-l'esistenza di una determinata istanza, che appartenesse ad una classe avente
-come genitore Class.
-Tuttavia, a seguito di alcune discussioni sul forum studenti da noi lette,
-abbiamo deciso di implementarlo nel modo descritto nella documentazione, in 
-quanto ci sembrava più utile.
-Una definizione coerente al testo del progetto sarebbe tuttavia facilmente
-ottenibile, in quanto basterebbe scrivere un codice del tipo:
-
-is_instance(Value, Parent):-
-	instance(Value, Class, _),
-	class(Class, Parents, _),
-	member(Parent, Parents).
-
-*******************************************************************************
+Nel secondo caso invece, verifica che esista una determinata istanza, e che 
+Class sia la classe di Value, oppure una sua superclasse/antenata.
+Può essere usato anche con variabili al posto di Value e/o Class.
 
 _______________________________________________________________________________
 
@@ -297,7 +249,9 @@ inst/2
 
 inst(InstanceName, Instance)
 
-Recupra un istanza dato il suo nome.
+Instance unifica con un istanza dato il suo nome.
+Se InstanceName è una variabile, unifica Instance con tutte le istanze create
+a runtime.
 
 _______________________________________________________________________________
 
@@ -313,7 +267,8 @@ fieldx/3
 
 fieldx(InstanceName, FieldNames, Values)
 
-Estrae i valori dei fields indicati come lista in FieldNames.
+Estrae l'ultimo field nella lista FieldNames per l'istanza InstanceName e lo
+unifica con Values.
 
 _______________________________________________________________________________
 
@@ -326,3 +281,11 @@ CHIAMATO DA fieldx/3
 Predicato ausiliario di fieldx/3.
 
 _______________________________________________________________________________
+
+get_last_value/2
+
+Varie definizioni...
+
+CHIAMATO DA fieldx/3
+
+Predicato ausiliario di fieldx/3
