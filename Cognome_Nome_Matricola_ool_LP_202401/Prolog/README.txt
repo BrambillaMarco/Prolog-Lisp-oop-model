@@ -23,12 +23,13 @@ def_class/3
 
 def_class(ClassName, Parents, Parts)
 
+-Verifica che ClassName non sia nè una variabile nè una lista.
 -Verifica che non esista una classe con il nome ClassName.
--Verifica che Parents sia una lista.
+-Verifica che Parents e Parts siano una lista.
 -Verifica che i parents presenti nella lista Parents esistano, e non 
  contengano doppioni, tramite il predicato exist_parents/1.
 -Verifica che la sintassi di Parts sia quella corretta, tramite il metodo
- check_parts/2.
+ check_parts/1.
 -Eredita i field e methods delle classi genitori, tramite il predicato 
  legacy/2.
 -Gestisce l'override tramite il predicato check_override/4.
@@ -50,19 +51,21 @@ Verifica che i Parents siano delle classi esistenti.
 _______________________________________________________________________________
 
 
-check_parts/2 e check_part/2
+check_parts/1 e check_part/1
 
-check_parts(ClassName, Parts)
+check_parts(Parts)
 
 CHIAMATO DA def_class/3
 
 Verifica che le Parts passate siano nel formato corretto, chiamando durante
-l'esecuzione anche il predicato ausiliario check_part/2.
+l'esecuzione anche il predicato ausiliario check_part/1.
 
 _______________________________________________________________________________
 
 
 legacy/2
+
+legacy([Parent | Parents], AllParts)
 
 CHIAMATO DA def_class/3
 
@@ -72,12 +75,12 @@ _______________________________________________________________________________
 
 check_override/4
 
-CHIAMATO DA def_class/3
-
-check_override([InheritedPart | InheritedRest],
+check_override([InheritedPart | InheritedParts],
                Parts,
                List,
                NewInheritedParts)
+
+CHIAMATO DA def_class/3
 
 Gestisce l'override, eliminando quindi eventuali fields e method di "default"
 definiti nelle classi genitori, solamente se in questa nuova classe, vengono
@@ -90,7 +93,7 @@ make/2
 
 make(InstanceName, ClassName)
 
-Crea una istanza della classe ClassName di nome InstanceName,utilizzando il 
+Crea una istanza della classe ClassName di nome InstanceName, utilizzando il 
 predicato make/3 chiamandolo in questo modo:
 make(InstanceName, ClassName, [])
 Dove la lista vuota indica l'assenza di fields per la nuova istanza, tenendo 
@@ -119,13 +122,13 @@ SE InstanceName E' UN SIMBOLO:
  ClassParts le Parts della classe di cui si vuole creare l'istanza.
 -Verifica che i Fields siano contenuti in una lista, e che siano coerenti 
  con quelli della classe ClassName, tramite il predicato validate_fields/2.
--Trasforma i field(FieldName, Value, Type) in [FieldName = Value], tramite il
- predicato transform_fields/2.
+-Trasforma i field(FieldName, Value) e i field(FieldName, Value, Type) in
+ [FieldName = Value], tramite il predicato transform_fields/2.
 -Unisce i Fields alle ClassParts, togliendo i duplicati, tramite il predicato
  union_fields/3.
 -Crea una istanza della classe ClassName, di nome IstanceName, che contiene
  come Fields il risultato di tutti i vari predicati descritti sopra.
--Chiama il predicato examination/2, passandogli l'istanza appena creata,
+-Chiama il predicato create_method/2, passandogli l'istanza appena creata,
  le sue Parts, una lista nuova e la variabile MethodList in modo da 
  controllare nuovamente che siano tutti nel formato corretto, e nel caso che
  la classe ClassName abbia un metodo, allora lo crea dinamicamente per la 
@@ -156,18 +159,18 @@ _______________________________________________________________________________
 
 transform_fields/2 e transform_field/2
 
-transform_fields([Field | Rest], [KeyValue | TransformedRest])
+transform_fields([Field | Rest], [Value | TransformedRest])
 
 CHIAMATO DA make/3
 
-Trasforma field(FieldName, Value, Type) in [FieldName = Value], chiamando
-durante l'esecuzione anche il predicato ausiliario transform_field/2.
+Trasforma field(FieldName, Value) e field(FieldName, Value, Type) 
+in [FieldName = Value], chiamando durante l'esecuzione anche il predicato ausiliario transform_field/2.
 
 _______________________________________________________________________________
 
 union_fields/3
 
-union_fields([Field | Rest], List2, Union)
+union_fields([Field | Rest], List, Union)
 
 CHIAMATO DA make/3
 
@@ -189,14 +192,18 @@ replace_value/3.
 
 _______________________________________________________________________________
 
-examination/2
+create_method/2
 
-examination(InstanceName, [Part | Parts])
+create_method(InstanceName, [Part | Parts])
 
 CHIAMATO DA make/3
 
 Analizza tutte le Parts di una istanza appena creata, e se trova un method,
-allora chiama lo crea dinamicamente per la istanza appena creata.
+allora lo crea dinamicamente per la istanza appena creata.
+I metodi con più di un attributo andranno chiamati in questo modo:
+MethodName(InstanceName, (MethodAttribute1, ..., MethodAttributeN).
+L'ordine dei MethodAttribute deve essere quello di comparsa nel corpo del
+metodo.
 
 _______________________________________________________________________________
 
@@ -204,7 +211,7 @@ replace/4
 
 replace(Old, New, OldString, NewString)
 
-CHIAMATO DA examination/2
+CHIAMATO DA create_method/2
 
 Sostituisce tutte le ricorrenze di Old in OldString con New, ed unifica il 
 risultato con NewString.
@@ -214,7 +221,7 @@ _______________________________________________________________________________
 
 list_to_sequence/2
 
-list_to_sequence([H | T], (H, Rest))
+list_to_sequence([Head | Tail], (Head, Rest))
 
 Chiamato in vari predicati, è da considerarsi un predicato "utility" in quanto
 svariate volte lungo il codice è necessario passare da una lista ad una
@@ -235,13 +242,23 @@ _______________________________________________________________________________
 is_instance/1 e is_instance/2
 
 is_instance(Value)
-is_instance(Value, Class)
+is_instance(Value, ClassName)
 
 Nel primo caso verifica che esista una determinata istanza, senza preoccuparsi
 della sua classe.
 Nel secondo caso invece, verifica che esista una determinata istanza, e che 
-Class sia la classe di Value, oppure una sua superclasse/antenata.
+ClassName sia la classe di Value, oppure una sua superclasse/antenata.
 Può essere usato anche con variabili al posto di Value e/o Class.
+
+_______________________________________________________________________________
+
+ancestors/3
+
+ancestors([Parent | Parents], ParentOfParents, SuperClass)
+
+CHIAMATO DA is_instance
+
+Trova gli antenati di una classe.
 
 _______________________________________________________________________________
 
@@ -265,7 +282,7 @@ _______________________________________________________________________________
 
 fieldx/3
 
-fieldx(InstanceName, FieldNames, Values)
+fieldx(InstanceName, FieldNames, Value)
 
 Estrae l'ultimo field nella lista FieldNames per l'istanza InstanceName e lo
 unifica con Values.
@@ -279,13 +296,3 @@ find_field_values([FieldName | Rest], Fields, [Value | RestValues])
 CHIAMATO DA fieldx/3
 
 Predicato ausiliario di fieldx/3.
-
-_______________________________________________________________________________
-
-get_last_value/2
-
-Varie definizioni...
-
-CHIAMATO DA fieldx/3
-
-Predicato ausiliario di fieldx/3
