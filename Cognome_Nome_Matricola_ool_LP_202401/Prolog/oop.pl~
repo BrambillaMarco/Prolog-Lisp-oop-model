@@ -399,5 +399,3 @@ find_field_values([FieldName | Rest], Fields,
                   [Value | RestValues]) :-
     memberchk(FieldName = Value, Fields),
     find_field_values(Rest, Fields, RestValues).
-
-%%%% end of file -- oop.pl --
