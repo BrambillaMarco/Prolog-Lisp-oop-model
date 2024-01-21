@@ -4,7 +4,7 @@ Condello Paolo, mat. 829800
 
 README per ool.lisp
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 add-class-spec
 
@@ -15,14 +15,14 @@ add-class-spec
 
 - Parametri:
   - name: 	Il nome simbolico della classe che si desidera aggiungere.
-  - class-spec: La specifica effettiva della classe, che è una rappresentazione
- 		dei dettagli della classe come la sua struttura, i genitori 
-		(se presenti), e i suoi campi e metodi.
+  - class-spec: La specifica effettiva della classe, che è una 
+                rappresentazione dei dettagli della classe come la sua 
+                struttura, i genitori (se presenti), e i suoi campi e metodi.
 
 - Restituisce: 	non restituisce un valore diretto; 
 		opera modificando l'hash-table.
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 get-class-spec
 
@@ -38,7 +38,7 @@ get-class-spec
 - Restituisce: 	restituisce la specifica della classe se questa è presente 
 		nell'hash-table; altrimenti restituisce nil.
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 def-class
 
@@ -59,23 +59,24 @@ def-class
 		a causa di nomi non validi o parti mal formattate, 
 		solleva un errore.
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 parents-control
 
 - Scopo: Una funzione ausiliaria utilizzata in def-class per verificare 
-	la validità dei genitori specificati per una classe. Controlla che ogni 
-	genitore sia un simbolo valido e che sia stato definito come una classe.
+	 la validità dei genitori specificati per una classe. Controlla che 
+         ogni genitore sia un simbolo valido e che sia stato definito come una 
+         classe.
 	
 - Parametri:
   - class-name: Il nome della classe per cui stiamo verificando i genitori.
   - parents: 	La lista dei genitori da verificare.
 
-- Restituisce: 	Restituisce NIL se tutti i genitori sono validi. Se un genitore 
-		non è valido o è lo stesso nome della classe in definizione, 
-		solleva un errore.
+- Restituisce: 	Restituisce NIL se tutti i genitori sono validi. Se un 
+                genitore non è valido o è lo stesso nome della classe in 
+                definizione, solleva un errore.
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 check-parts
 
@@ -88,7 +89,7 @@ check-parts
 
 - Restituisce: 	Restituisce T (vero) se le parti sono formattate correttamente, 
 		altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 valid-parts-list-p
 
@@ -101,19 +102,19 @@ valid-parts-list-p
 
 - Restituisce: 	Restituisce T se ogni parte è correttamente formattata, 
 		altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 valid-part-p
 
-- Scopo: Verifica una singola parte (campo o metodo) di una classe, controllando 
-	il suo formato e la validità dei suoi componenti.
+- Scopo: Verifica una singola parte (campo o metodo) di una classe, 
+         controllando il suo formato e la validità dei suoi componenti.
 
 - Parametri:
   - part: La parte (campo o metodo) da verificare.
 
 - Restituisce: 	Restituisce T se la parte è formattata correttamente, 
 		altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 my-check-type
 
@@ -131,7 +132,7 @@ my-check-type
 - Note aggiuntive: è possibile inserire un'istanza come value di un field,
 		l'importante è che sia istanziata da una classe 
 		corrispondente al field-type
-________________________________________________________________________________
+_______________________________________________________________________________
 
 formatta
 
@@ -143,7 +144,7 @@ formatta
   - parts: Le parti (campi e metodi) della classe da trasformare.
 
 - Restituisce: Una lista associativa delle parti formattate.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 format-fields
 
@@ -155,7 +156,7 @@ format-fields
 
 - Restituisce: 	Una lista dei campi formattati, ciascuno con il suo nome, 
 		valore e tipo.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 format-methods
 
@@ -166,7 +167,7 @@ format-methods
   - methods: I metodi da formattare.
 
 - Restituisce: Una lista dei metodi formattati.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 identify-method
 
@@ -178,7 +179,7 @@ identify-method
   - result: Il risultato accumulato fino a quel momento.
 
 - Restituisce: Una lista aggiornata con i metodi processati.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 process-method
 
@@ -193,7 +194,7 @@ process-method
 
 - Restituisce: 	Non restituisce un valore diretto, modifica l'ambiente globale 
 		associando il nome del metodo alla sua implementazione.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 rewrite-method-code
 
@@ -207,7 +208,7 @@ rewrite-method-code
 
 - Restituisce: 	Una nuova espressione S (S-expression) che rappresenta il 
 		metodo riscritto.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 make
 
@@ -223,7 +224,7 @@ make
 - Restituisce:	 Un'istanza della classe se la creazione ha successo. 
 		Se i parametri non sono validi o non compatibili con la classe, 
 		solleva un errore.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 format-parameters
 
@@ -235,7 +236,7 @@ format-parameters
   - parameters: I parametri da formattare.
 
 - Restituisce: Una lista associativa dei parametri formattati.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 parameters-control
 
@@ -248,7 +249,7 @@ parameters-control
 
 - Restituisce: 	Restituisce NIL se tutti i nomi dei campi sono validi. 
 		Se un nome non è valido, solleva un errore.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 instance-check
 
@@ -266,7 +267,7 @@ instance-check
 
 -Note aggiuntive: per ottenere class-value e class-value-type riutilizzo
 		la funzione "field" e "get-field-type"
-________________________________________________________________________________
+_______________________________________________________________________________
 
 field
 
@@ -280,7 +281,7 @@ field
 
 - Restituisce: 	Il valore del campo se esiste. Se il campo non esiste 
 		nell'istanza, solleva un errore.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 get-field-type
 
@@ -293,7 +294,7 @@ get-field-type
 
 - Restituisce: 	Il tipo del campo se esiste. Se il campo non esiste 
 		nell'istanza, solleva un errore.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 recursive-field-instance
 
@@ -307,13 +308,14 @@ recursive-field-instance
 
 - Restituisce: 	Restituisce i dettagli del campo (nome, valore, tipo) 
 		se trovato, altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 recursive-field-tree
 
-- Scopo: Una funzione ausiliaria che ricerca ricorsivamente un campo attraverso 
-	l'albero di ereditarietà delle classi, partendo da un'istanza specifica. 
-	Questo permette di trovare i campi ereditati da classi genitore.
+- Scopo: Una funzione ausiliaria che ricerca ricorsivamente un campo 
+         attraverso l'albero di ereditarietà delle classi, partendo da 
+         un'istanza specifica. 
+	 Questo permette di trovare i campi ereditati da classi genitore.
 
 - Parametri:
   - classes: 	La lista delle classi da esaminare durante la ricerca.
@@ -321,7 +323,7 @@ recursive-field-tree
 
 - Restituisce: 	Restituisce i dettagli del campo se trovato nell'albero di 
 		ereditarietà, altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 check-type-match
 
@@ -344,13 +346,13 @@ check-type-match
 		sia di un tipo/sottotipo corrispondente al class-value-type
 		(casting implicito).
 
-________________________________________________________________________________
+_______________________________________________________________________________
 
 field*
 
-- Scopo: Una funzione che facilita l'accesso ai campi annidati all'interno delle 
-	istanze delle classi. Permette di recuperare i valori dei campi 
-	attraversando più livelli di campi in un'unica chiamata.
+- Scopo: Una funzione che facilita l'accesso ai campi annidati all'interno 
+         delle istanze delle classi. Permette di recuperare i valori dei campi 
+	 attraversando più livelli di campi in un'unica chiamata.
 
 - Parametri:
   - instance: 		L'istanza dalla quale iniziare la ricerca.
@@ -359,7 +361,7 @@ field*
 
 - Restituisce: 	Il valore dell'ultimo campo nel percorso specificato. 
 		Se uno dei campi intermedi non esiste, solleva un errore.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 field*-recursive
 
@@ -372,7 +374,7 @@ field*-recursive
   - field-name: La sequenza di nomi di campi da seguire.
 
 - Restituisce: Il valore dell'ultimo campo nel percorso specificato.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 is-class
 
@@ -384,7 +386,7 @@ is-class
 
 - Restituisce: 	Restituisce T se class-name è una classe definita, 
 		altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 is-instance
 
@@ -401,7 +403,7 @@ is-instance
 - Restituisce: 	Restituisce T se value è un'istanza della classe specificata 
 		o di qualsiasi classe se class-name non è fornito. 
 		Altrimenti, restituisce NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 is-subclass
 
@@ -414,7 +416,7 @@ is-subclass
 
 - Restituisce: 	Restituisce T se subclass è una sottoclasse di superclass, 
 		altrimenti NIL.
-________________________________________________________________________________
+_______________________________________________________________________________
 
 is-subclass-helper
 
@@ -430,4 +432,4 @@ is-subclass-helper
 
 -Note aggiuntive: utilizza la funzione 'some' per completare una ricerca 
 		orizzontale/verticale nell'albero di ereditarietà.
-________________________________________________________________________________
+_______________________________________________________________________________
