@@ -164,7 +164,8 @@ transform_fields([Field | Rest], [Value | TransformedRest])
 CHIAMATO DA make/3
 
 Trasforma field(FieldName, Value) e field(FieldName, Value, Type) 
-in [FieldName = Value], chiamando durante l'esecuzione anche il predicato ausiliario transform_field/2.
+in [FieldName = Value], chiamando durante l'esecuzione anche il predicato 
+ausiliario transform_field/2.
 
 _______________________________________________________________________________
 
