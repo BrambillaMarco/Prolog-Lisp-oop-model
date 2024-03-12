@@ -1,8 +1,0 @@
-to_string non unifica
-
-prolog make con variabile
-rileggere traccia
-readme.txt lisp
-REGOLA 80 COLONNE
-scrivere bene i nomi delle directory
-PER ULTIMO: riscrivere Prolog a mano per caratteri Unicode
